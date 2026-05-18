@@ -6,6 +6,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,16 +18,16 @@ final class EvalClient {
 
     private static final Logger LOGGER = Logger.getLogger(EvalClient.class.getName());
 
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
     private final String baseUrl;
     private final String apiKey;
-    private final HttpClient http;
 
     EvalClient(String baseUrl, String apiKey) {
         this.baseUrl = baseUrl.replaceAll("/$", "");
         this.apiKey  = apiKey;
-        this.http    = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
     }
 
     /**
@@ -56,7 +57,7 @@ final class EvalClient {
                 .build();
 
         try {
-            HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> resp = sendWithRetry(req);
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
                 LOGGER.log(Level.WARNING,
                         "NirikshaAI: eval submission failed (status={0}): {1}",
@@ -71,6 +72,23 @@ final class EvalClient {
             LOGGER.log(Level.WARNING, "NirikshaAI: eval submission error", e);
             throw new NirikshaAIException("Eval submission failed: " + e.getMessage(), e);
         }
+    }
+
+    private HttpResponse<String> sendWithRetry(HttpRequest req) throws Exception {
+        int maxAttempts = 3;
+        Exception lastEx = null;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                HttpResponse<String> resp = HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
+                if (resp.statusCode() < 500) return resp; // success or 4xx (don't retry 4xx)
+                LOGGER.warning("NirikshaAI: eval attempt " + attempt + " got HTTP " + resp.statusCode());
+            } catch (Exception e) {
+                LOGGER.warning("NirikshaAI: eval attempt " + attempt + " failed: " + e.getMessage());
+                lastEx = e;
+            }
+            if (attempt < maxAttempts) Thread.sleep(attempt * 500L);
+        }
+        throw lastEx != null ? lastEx : new NirikshaAIException("Eval failed after " + maxAttempts + " attempts");
     }
 
     private String buildBatchJson(List<EvalInput> inputs) {
@@ -92,6 +110,25 @@ final class EvalClient {
         sb.append("\"eval_type\":").append(jsonString(e.getEvalType()));
         if (e.getExplanation() != null) {
             sb.append(",\"explanation\":").append(jsonString(e.getExplanation()));
+        }
+        if (e.getExperimentId() != null) {
+            sb.append(",\"experiment_id\":").append(jsonString(e.getExperimentId()));
+        }
+        if (e.getConfidence() != null) {
+            sb.append(",\"confidence\":").append(e.getConfidence());
+        }
+        if (e.getMetadata() != null && !e.getMetadata().isEmpty()) {
+            sb.append(",\"metadata\":{");
+            boolean first = true;
+            for (Map.Entry<String, String> entry : e.getMetadata().entrySet()) {
+                if (!first) sb.append(',');
+                sb.append(jsonString(entry.getKey())).append(':').append(jsonString(entry.getValue()));
+                first = false;
+            }
+            sb.append('}');
+        }
+        if (e.getEvalTime() != null) {
+            sb.append(",\"eval_time\":").append(jsonString(e.getEvalTime().toString()));
         }
         sb.append('}');
         return sb.toString();

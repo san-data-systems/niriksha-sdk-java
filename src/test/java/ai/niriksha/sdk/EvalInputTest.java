@@ -58,4 +58,22 @@ class EvalInputTest {
                         .score(1.5)
                         .build());
     }
+
+    @Test
+    @DisplayName("EvalInput builder accepts new optional fields")
+    void newOptionalFields() {
+        EvalInput e = EvalInput.builder()
+                .traceId("abc123def456abc123def456abc12345")
+                .metricName("faithfulness")
+                .score(0.9)
+                .experimentId("exp-001")
+                .confidence(0.85)
+                .metadata(java.util.Map.of("model", "gpt-4o"))
+                .evalTime(java.time.Instant.now())
+                .build();
+        assertEquals("exp-001", e.getExperimentId());
+        assertEquals(0.85, e.getConfidence(), 1e-9);
+        assertEquals("gpt-4o", e.getMetadata().get("model"));
+        assertNotNull(e.getEvalTime());
+    }
 }

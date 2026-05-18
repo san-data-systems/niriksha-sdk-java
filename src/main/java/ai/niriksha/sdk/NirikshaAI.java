@@ -67,6 +67,7 @@ public final class NirikshaAI {
     // Shared state populated by Builder.build() — used by eval/prompt helpers.
     private static volatile EvalClient   _evalClient;
     private static volatile PromptClient _promptClient;
+    private static volatile boolean      _initialized;
 
     private NirikshaAI() {
         // utility class — use builder()
@@ -77,6 +78,44 @@ public final class NirikshaAI {
      */
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * Returns {@code true} if the SDK has been successfully initialised via
+     * {@link Builder#build()}.
+     */
+    public static boolean isInitialized() {
+        return _initialized;
+    }
+
+    /**
+     * Force-flushes all pending spans, metrics, and log records using a 5-second timeout.
+     * Call before process exit in serverless or short-lived environments.
+     */
+    public static void flush() {
+        flush(java.time.Duration.ofSeconds(5));
+    }
+
+    /**
+     * Force-flushes all pending spans, metrics, and log records within the given timeout.
+     * Call before process exit in serverless or short-lived environments.
+     *
+     * @param timeout maximum time to wait for each provider to flush
+     */
+    public static void flush(java.time.Duration timeout) {
+        long ms = timeout.toMillis();
+        var otel = io.opentelemetry.api.GlobalOpenTelemetry.get();
+        if (otel instanceof io.opentelemetry.sdk.OpenTelemetrySdk sdk) {
+            sdk.getSdkTracerProvider()
+               .forceFlush()
+               .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
+            sdk.getSdkMeterProvider()
+               .forceFlush()
+               .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
+            sdk.getSdkLoggerProvider()
+               .forceFlush()
+               .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -146,6 +185,13 @@ public final class NirikshaAI {
     // Internal accessors
     // -------------------------------------------------------------------------
 
+    /** Package-private — for test teardown only. Resets SDK state between tests. */
+    static void resetForTest() {
+        _evalClient   = null;
+        _promptClient = null;
+        _initialized  = false;
+    }
+
     private static EvalClient evalClient() {
         EvalClient c = _evalClient;
         if (c == null) throw new IllegalStateException(
@@ -183,7 +229,7 @@ public final class NirikshaAI {
         private String apiKey;
 
         /** OpenTelemetry {@code service.name} resource attribute. */
-        private String serviceName = "java-service";
+        private String serviceName = "my-service";
 
         /** OpenTelemetry {@code deployment.environment} resource attribute. */
         private String environment = "production";
@@ -353,6 +399,8 @@ public final class NirikshaAI {
                     Resource.builder()
                             .put(ResourceAttributes.SERVICE_NAME, serviceName)
                             .put(ResourceAttributes.DEPLOYMENT_ENVIRONMENT, environment)
+                            .put(io.opentelemetry.api.common.AttributeKey.stringKey("telemetry.sdk.version"), SdkVersion.VERSION)
+                            .put(io.opentelemetry.api.common.AttributeKey.stringKey("telemetry.sdk.language"), SdkVersion.LANGUAGE)
                             .build());
 
             // -- Trace exporter --
@@ -407,6 +455,7 @@ public final class NirikshaAI {
             String restBase = endpoint != null ? endpoint : "https://app.niriksha.ai";
             NirikshaAI._evalClient   = new EvalClient(restBase, apiKey);
             NirikshaAI._promptClient = new PromptClient(restBase, apiKey);
+            NirikshaAI._initialized  = true;
 
             return new ShutdownHook(openTelemetry);
         }

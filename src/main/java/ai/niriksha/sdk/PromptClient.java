@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -24,22 +25,35 @@ final class PromptClient {
 
     private static final Logger LOGGER = Logger.getLogger(PromptClient.class.getName());
 
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
+    // In-memory prompt cache with TTL
+    private static final ConcurrentHashMap<String, _CacheEntry> CACHE = new ConcurrentHashMap<>();
+    private static final long CACHE_TTL_MS = 5 * 60 * 1000L;
+
+    private record _CacheEntry(PromptResponse response, long expiresAt) {}
+
     private final String baseUrl;
     private final String apiKey;
-    private final HttpClient http;
 
     PromptClient(String baseUrl, String apiKey) {
         this.baseUrl = baseUrl.replaceAll("/$", "");
         this.apiKey  = apiKey;
-        this.http    = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
     }
 
     /**
      * Fetches a prompt by name, optionally pinning to a version and substituting variables.
+     * Results are cached in-memory for {@value #CACHE_TTL_MS} ms.
      */
     PromptResponse getPrompt(String name, GetPromptOptions options) {
+        String key = cacheKey(name, options);
+        _CacheEntry cached = CACHE.get(key);
+        if (cached != null && System.currentTimeMillis() < cached.expiresAt()) {
+            return cached.response();
+        }
+
         StringBuilder url = new StringBuilder(baseUrl)
                 .append("/api/v1/prompts/")
                 .append(URLEncoder.encode(name, StandardCharsets.UTF_8));
@@ -59,7 +73,9 @@ final class PromptClient {
         }
 
         String body = get(url.toString());
-        return parsePromptResponse(body);
+        PromptResponse response = parsePromptResponse(body);
+        CACHE.put(key, new _CacheEntry(response, System.currentTimeMillis() + CACHE_TTL_MS));
+        return response;
     }
 
     /**
@@ -68,6 +84,13 @@ final class PromptClient {
     List<PromptResponse> listPrompts() {
         String body = get(baseUrl + "/api/v1/prompts");
         return parsePromptList(body);
+    }
+
+    /**
+     * Clears the in-memory prompt cache. Useful for testing or forced refresh scenarios.
+     */
+    public static void clearCache() {
+        CACHE.clear();
     }
 
     // -----------------------------------------------------------------------
@@ -83,7 +106,7 @@ final class PromptClient {
                 .GET()
                 .build();
         try {
-            HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> resp = HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
                 throw new NirikshaAIException(
                         "Prompt request failed with HTTP " + resp.statusCode() + ": " + resp.body());
@@ -101,17 +124,15 @@ final class PromptClient {
     // Minimal JSON parsing (no external dependency)
     // -----------------------------------------------------------------------
 
-    private static final Pattern STRING_FIELD =
-            Pattern.compile("\"(\\w+)\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
-    private static final Pattern INT_FIELD =
-            Pattern.compile("\"(\\w+)\"\\s*:\\s*(\\d+)");
-
     PromptResponse parsePromptResponse(String json) {
         String name        = extractString(json, "name");
         String text        = extractString(json, "text");
         String description = extractString(json, "description");
+        String createdAt   = extractString(json, "created_at");
+        String updatedAt   = extractString(json, "updated_at");
         int    version     = extractInt(json, "version");
-        return new PromptResponse(name, version, text, description);
+        List<String> tags  = extractStringArray(json, "tags");
+        return new PromptResponse(name, version, text, description, tags, createdAt, updatedAt);
     }
 
     List<PromptResponse> parsePromptList(String json) {
@@ -147,10 +168,27 @@ final class PromptClient {
         return "";
     }
 
+    private List<String> extractStringArray(String json, String key) {
+        Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*\\[([^\\]]*)\\]");
+        Matcher m = p.matcher(json);
+        if (!m.find()) return List.of();
+        String inner = m.group(1);
+        List<String> result = new ArrayList<>();
+        Matcher items = Pattern.compile("\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(inner);
+        while (items.find()) result.add(items.group(1));
+        return result;
+    }
+
     private int extractInt(String json, String key) {
         Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*(\\d+)");
         Matcher m = p.matcher(json);
         if (m.find()) return Integer.parseInt(m.group(1));
         return 0;
+    }
+
+    private static String cacheKey(String name, GetPromptOptions opts) {
+        String version = opts != null && opts.getVersion() != null ? opts.getVersion().toString() : "latest";
+        String vars    = opts != null ? opts.getVariables().toString() : "{}";
+        return name + ":" + version + ":" + vars;
     }
 }

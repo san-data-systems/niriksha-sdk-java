@@ -50,6 +50,23 @@ public final class ShutdownHook implements Closeable {
     }
 
     /**
+     * Force-flushes all pending telemetry. Delegates to {@link NirikshaAI#flush()}.
+     */
+    public void flush() {
+        NirikshaAI.flush();
+    }
+
+    /**
+     * Force-flushes all pending telemetry within the given timeout.
+     * Delegates to {@link NirikshaAI#flush(java.time.Duration)}.
+     *
+     * @param timeout maximum time to wait for each provider to flush
+     */
+    public void flush(java.time.Duration timeout) {
+        NirikshaAI.flush(timeout);
+    }
+
+    /**
      * Shuts down all telemetry providers, flushing any pending data.
      * Idempotent — safe to call more than once.
      */

@@ -23,8 +23,9 @@ class NirikshaAITest {
             hook.close();
             hook = null;
         }
-        // Reset OTel global between tests
+        // Reset OTel global and SDK state between tests
         io.opentelemetry.api.GlobalOpenTelemetry.resetForTest();
+        NirikshaAI.resetForTest();
     }
 
     // -----------------------------------------------------------------------
@@ -131,5 +132,19 @@ class NirikshaAITest {
 
         assertThrows(IllegalStateException.class, builder::build,
                 "build() should throw when apiKey is not set");
+    }
+
+    @Test
+    @DisplayName("isInitialized() returns false before build() and true after")
+    void isInitializedFlag() {
+        assertFalse(NirikshaAI.isInitialized(), "should be false before init");
+        hook = NirikshaAI.builder()
+                .endpoint("http://localhost:8080")
+                .apiKey("nai_test")
+                .insecure(true)
+                .enableMetrics(false)
+                .enableLogs(false)
+                .build();
+        assertTrue(NirikshaAI.isInitialized(), "should be true after build()");
     }
 }

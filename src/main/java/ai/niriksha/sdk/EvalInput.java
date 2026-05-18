@@ -1,5 +1,10 @@
 package ai.niriksha.sdk;
 
+import java.time.Instant;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Input for a single LLM evaluation result.
  *
@@ -25,21 +30,41 @@ public final class EvalInput {
     private final String explanation;
     private final String evalType;
 
+    /** Groups evals into an A/B experiment. Optional. */
+    private final String experimentId;
+
+    /** Evaluator confidence in [0, 1]. {@code null} means unset. */
+    private final Double confidence;
+
+    /** Arbitrary context key-value pairs. Never {@code null}; may be empty. */
+    private final Map<String, String> metadata;
+
+    /** When the evaluation was performed. {@code null} means server time. */
+    private final Instant evalTime;
+
     private EvalInput(Builder b) {
-        this.traceId     = b.traceId;
-        this.metricName  = b.metricName;
-        this.score       = b.score;
-        this.label       = b.label;
-        this.explanation = b.explanation;
-        this.evalType    = b.evalType;
+        this.traceId      = b.traceId;
+        this.metricName   = b.metricName;
+        this.score        = b.score;
+        this.label        = b.label;
+        this.explanation  = b.explanation;
+        this.evalType     = b.evalType;
+        this.experimentId = b.experimentId;
+        this.confidence   = b.confidence;
+        this.metadata     = Collections.unmodifiableMap(new HashMap<>(b.metadata));
+        this.evalTime     = b.evalTime;
     }
 
-    public String getTraceId()     { return traceId; }
-    public String getMetricName()  { return metricName; }
-    public double getScore()       { return score; }
-    public String getLabel()       { return label; }
-    public String getExplanation() { return explanation; }
-    public String getEvalType()    { return evalType; }
+    public String              getTraceId()      { return traceId; }
+    public String              getMetricName()   { return metricName; }
+    public double              getScore()        { return score; }
+    public String              getLabel()        { return label; }
+    public String              getExplanation()  { return explanation; }
+    public String              getEvalType()     { return evalType; }
+    public String              getExperimentId() { return experimentId; }
+    public Double              getConfidence()   { return confidence; }
+    public Map<String, String> getMetadata()     { return metadata; }
+    public Instant             getEvalTime()     { return evalTime; }
 
     public static Builder builder() { return new Builder(); }
 
@@ -50,6 +75,10 @@ public final class EvalInput {
         private String label = "pass";
         private String explanation;
         private String evalType = "llm_judge";
+        private String experimentId;
+        private Double confidence;
+        private final Map<String, String> metadata = new HashMap<>();
+        private Instant evalTime;
 
         private Builder() {}
 
@@ -86,6 +115,30 @@ public final class EvalInput {
         /** Evaluation method: "llm_judge", "rule_based", or "human". Default: "llm_judge". */
         public Builder evalType(String evalType) {
             this.evalType = evalType;
+            return this;
+        }
+
+        /** Groups this eval into a named A/B experiment. Optional. */
+        public Builder experimentId(String experimentId) {
+            this.experimentId = experimentId;
+            return this;
+        }
+
+        /** Evaluator confidence score in [0, 1]. Optional. */
+        public Builder confidence(double confidence) {
+            this.confidence = confidence;
+            return this;
+        }
+
+        /** Arbitrary context metadata. Optional. */
+        public Builder metadata(Map<String, String> metadata) {
+            if (metadata != null) this.metadata.putAll(metadata);
+            return this;
+        }
+
+        /** When the evaluation was performed. {@code null} defers to server time. */
+        public Builder evalTime(Instant evalTime) {
+            this.evalTime = evalTime;
             return this;
         }
 
