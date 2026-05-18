@@ -1,5 +1,9 @@
 package com.example.demo;
 
+import ai.niriksha.sdk.EvalInput;
+import ai.niriksha.sdk.GetPromptOptions;
+import ai.niriksha.sdk.NirikshaAI;
+import ai.niriksha.sdk.PromptResponse;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
@@ -10,11 +14,14 @@ import io.opentelemetry.context.Scope;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * REST controller that demonstrates custom OpenTelemetry span creation.
@@ -84,6 +91,60 @@ public class OrderController {
             span.recordException(e);
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "Failed to fetch items for order " + id));
+        } finally {
+            span.end();
+        }
+    }
+
+    /**
+     * POST /orders/summarise — generate an AI order summary and evaluate it.
+     *
+     * <p>Demonstrates:
+     * <ul>
+     *   <li>Fetching a versioned prompt template from the NirikshaAI prompt vault.</li>
+     *   <li>Submitting an eval result linked to the current trace.</li>
+     * </ul>
+     */
+    @PostMapping("/summarise")
+    public ResponseEntity<Map<String, Object>> summariseOrder(@RequestBody Map<String, Object> body) {
+        Span span = tracer.spanBuilder("orders.summarise").startSpan();
+        try (Scope ignored = span.makeCurrent()) {
+            String orderId = (String) body.getOrDefault("orderId", "unknown");
+            span.setAttribute("order.id", orderId);
+
+            // Fetch a prompt template from the NirikshaAI vault (graceful fallback)
+            String promptText;
+            try {
+                PromptResponse prompt = NirikshaAI.getPrompt("order-summary",
+                        GetPromptOptions.builder().variable("order_id", orderId).build());
+                promptText = prompt.getText();
+                span.setAttribute("prompt.name", prompt.getName());
+                span.setAttribute("prompt.version", prompt.getVersion());
+            } catch (Exception ex) {
+                promptText = "Summarise order " + orderId + " for the customer.";
+            }
+
+            // In a real app you'd call an LLM here. We stub a summary.
+            String summary = "Order " + orderId + " contains 2 items totalling $49.99 and is SHIPPED.";
+            span.setAttribute("summary.length", summary.length());
+
+            // Submit an eval asynchronously so we don't block the HTTP response
+            String traceId = span.getSpanContext().getTraceId();
+            CompletableFuture.runAsync(() -> {
+                try {
+                    NirikshaAI.submitEval(EvalInput.builder()
+                            .traceId(traceId)
+                            .metricName("summary_quality")
+                            .score(0.88)
+                            .label("pass")
+                            .explanation("Summary is accurate and concise")
+                            .evalType("rule_based")
+                            .build());
+                } catch (Exception ignored2) { /* best-effort */ }
+            });
+
+            return ResponseEntity.ok(Map.of("orderId", orderId, "summary", summary,
+                    "promptUsed", promptText));
         } finally {
             span.end();
         }

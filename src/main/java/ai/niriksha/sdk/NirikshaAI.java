@@ -64,6 +64,10 @@ public final class NirikshaAI {
 
     private static final Logger LOGGER = Logger.getLogger(NirikshaAI.class.getName());
 
+    // Shared state populated by Builder.build() — used by eval/prompt helpers.
+    private static volatile EvalClient   _evalClient;
+    private static volatile PromptClient _promptClient;
+
     private NirikshaAI() {
         // utility class — use builder()
     }
@@ -73,6 +77,87 @@ public final class NirikshaAI {
      */
     public static Builder builder() {
         return new Builder();
+    }
+
+    // -------------------------------------------------------------------------
+    // Eval helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Submits a single LLM evaluation result to NirikshaAI.
+     *
+     * <p>Must be called after {@link Builder#build()} has been invoked.
+     *
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     * @throws NirikshaAIException   if the HTTP request fails
+     */
+    public static void submitEval(EvalInput input) {
+        evalClient().submitEval(input);
+    }
+
+    /**
+     * Submits a batch of LLM evaluation results in a single HTTP request.
+     *
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     * @throws NirikshaAIException   if the HTTP request fails
+     */
+    public static void submitEvalsBatch(java.util.List<EvalInput> inputs) {
+        evalClient().submitEvalsBatch(inputs);
+    }
+
+    // -------------------------------------------------------------------------
+    // Prompt helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Fetches the latest deployed version of the named prompt template.
+     *
+     * @param name prompt slug (e.g. {@code "customer-support-system"})
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     * @throws NirikshaAIException   if the HTTP request fails
+     */
+    public static PromptResponse getPrompt(String name) {
+        return promptClient().getPrompt(name, null);
+    }
+
+    /**
+     * Fetches a prompt template with optional version pinning and variable substitution.
+     *
+     * @param name    prompt slug
+     * @param options version + variables, or {@code null} for defaults
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     * @throws NirikshaAIException   if the HTTP request fails
+     */
+    public static PromptResponse getPrompt(String name, GetPromptOptions options) {
+        return promptClient().getPrompt(name, options);
+    }
+
+    /**
+     * Lists all prompt templates available in the current project.
+     *
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     * @throws NirikshaAIException   if the HTTP request fails
+     */
+    public static java.util.List<PromptResponse> listPrompts() {
+        return promptClient().listPrompts();
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal accessors
+    // -------------------------------------------------------------------------
+
+    private static EvalClient evalClient() {
+        EvalClient c = _evalClient;
+        if (c == null) throw new IllegalStateException(
+                "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
+        return c;
+    }
+
+    private static PromptClient promptClient() {
+        PromptClient c = _promptClient;
+        if (c == null) throw new IllegalStateException(
+                "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
+        return c;
     }
 
     // -------------------------------------------------------------------------
@@ -317,6 +402,11 @@ public final class NirikshaAI {
                     .setPropagators(io.opentelemetry.context.propagation.ContextPropagators.create(
                             io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator.getInstance()))
                     .buildAndRegisterGlobal();
+
+            // Wire eval and prompt helpers — use REST endpoint as the base URL.
+            String restBase = endpoint != null ? endpoint : "https://app.niriksha.ai";
+            NirikshaAI._evalClient   = new EvalClient(restBase, apiKey);
+            NirikshaAI._promptClient = new PromptClient(restBase, apiKey);
 
             return new ShutdownHook(openTelemetry);
         }
