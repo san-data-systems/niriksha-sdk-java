@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.3.0</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.example</groupId>
+  <artifactId>niriksha-spring-boot-demo</artifactId>
+  <version>0.1.0</version>
+  <packaging>jar</packaging>
+
+  <name>NirikshaAI Spring Boot Demo</name>
+  <description>Demonstrates NirikshaAI SDK integration in a Spring Boot 3 application</description>
+
+  <properties>
+    <java.version>17</java.version>
+    <opentelemetry.version>1.38.0</opentelemetry.version>
+    <opentelemetry.semconv.version>1.25.0-alpha</opentelemetry.semconv.version>
+    <niriksha.sdk.version>0.1.0</niriksha.sdk.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-bom</artifactId>
+        <version>${opentelemetry.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- Spring Boot Web -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- NirikshaAI Java SDK -->
+    <!--
+      After publishing to Maven Central, replace the local dependency block below with:
+
+      <dependency>
+        <groupId>ai.niriksha</groupId>
+        <artifactId>niriksha-sdk-java</artifactId>
+        <version>${niriksha.sdk.version}</version>
+      </dependency>
+
+      For now, install the SDK locally:
+        cd ../../  &&  mvn install -DskipTests
+    -->
+    <dependency>
+      <groupId>ai.niriksha</groupId>
+      <artifactId>niriksha-sdk-java</artifactId>
+      <version>${niriksha.sdk.version}</version>
+    </dependency>
+
+    <!-- OpenTelemetry API (for creating spans in controllers) -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-api</artifactId>
+    </dependency>
+
+    <!-- Semantic conventions -->
+    <dependency>
+      <groupId>io.opentelemetry.semconv</groupId>
+      <artifactId>opentelemetry-semconv</artifactId>
+      <version>${opentelemetry.semconv.version}</version>
+    </dependency>
+
+    <!-- Test -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>
