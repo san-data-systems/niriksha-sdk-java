@@ -258,6 +258,9 @@ public final class NirikshaAI {
         /** Whether to enable OTLP log export. */
         private boolean enableLogs = true;
 
+        /** Head-based trace sampling rate (0.0–1.0). Default: 1.0 (sample all traces). */
+        private double sampleRate = 1.0;
+
         private Builder() {}
 
         // --- fluent setters ---
@@ -369,6 +372,15 @@ public final class NirikshaAI {
             return this;
         }
 
+        /**
+         * Sets the head-based trace sampling rate (0.0–1.0).
+         * Use 0.1 to sample ~10% of traces. Default: 1.0 (sample all).
+         */
+        public Builder sampleRate(double sampleRate) {
+            this.sampleRate = sampleRate;
+            return this;
+        }
+
         // --- build ---
 
         /**
@@ -406,8 +418,19 @@ public final class NirikshaAI {
             // -- Trace exporter --
             OtlpGrpcSpanExporter spanExporter = buildSpanExporter(grpcAddress, useTls);
 
+            io.opentelemetry.sdk.trace.samplers.Sampler sampler;
+            if (sampleRate >= 1.0) {
+                sampler = io.opentelemetry.sdk.trace.samplers.Sampler.alwaysOn();
+            } else if (sampleRate <= 0.0) {
+                sampler = io.opentelemetry.sdk.trace.samplers.Sampler.alwaysOff();
+            } else {
+                sampler = io.opentelemetry.sdk.trace.samplers.Sampler.parentBased(
+                        io.opentelemetry.sdk.trace.samplers.Sampler.traceIdRatioBased(sampleRate));
+            }
+
             SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
                     .setResource(resource)
+                    .setSampler(sampler)
                     .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())
                     .build();
 
