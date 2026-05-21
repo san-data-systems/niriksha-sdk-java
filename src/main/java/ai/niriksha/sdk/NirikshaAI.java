@@ -210,6 +210,27 @@ public final class NirikshaAI {
     // Builder
     // -------------------------------------------------------------------------
 
+    private static void installQuotaLogHandler() {
+        java.util.logging.Logger otelLogger = java.util.logging.Logger.getLogger("io.opentelemetry");
+        otelLogger.addHandler(new java.util.logging.Handler() {
+            @Override
+            public void publish(java.util.logging.LogRecord record) {
+                if (record == null) return;
+                String msg = record.getMessage();
+                if (msg != null
+                        && msg.contains("ResourceExhausted")
+                        && msg.contains("data limit reached")) {
+                    LOGGER.severe(
+                        "NirikshaAI: org data quota exceeded — telemetry is being dropped. "
+                        + "Contact your platform admin to increase the quota.");
+                }
+            }
+
+            @Override public void flush() {}
+            @Override public void close() {}
+        });
+    }
+
     /**
      * Fluent builder for configuring and initializing the NirikshaAI SDK.
      */
@@ -479,6 +500,11 @@ public final class NirikshaAI {
             NirikshaAI._evalClient   = new EvalClient(restBase, apiKey);
             NirikshaAI._promptClient = new PromptClient(restBase, apiKey);
             NirikshaAI._initialized  = true;
+
+            // Install a JUL handler on the OTel SDK logger hierarchy to surface
+            // quota-exceeded errors at SEVERE. The BatchSpanProcessor logs export
+            // failures at WARNING — invisible in most production setups.
+            installQuotaLogHandler();
 
             return new ShutdownHook(openTelemetry);
         }
