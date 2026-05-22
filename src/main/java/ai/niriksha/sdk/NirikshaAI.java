@@ -41,7 +41,7 @@ import java.util.logging.Logger;
  * <pre>{@code
  * ShutdownHook hook = NirikshaAI.builder()
  *     .endpoint("https://app.niriksha.ai")
- *     .otlpEndpoint("grpc-ingest.niriksha.ai:4317")
+ *     .otlpEndpoint("grpc-ingest.niriksha.ai:443")
  *     .apiKey(System.getenv("NIRIKSHA_API_KEY"))
  *     .serviceName("my-service")
  *     .environment("production")
@@ -240,7 +240,7 @@ public final class NirikshaAI {
         private String endpoint;
 
         /**
-         * gRPC ingest address override, e.g. {@code grpc-ingest.niriksha.ai:4317}.
+         * gRPC ingest address override, e.g. {@code grpc-ingest.niriksha.ai:443}.
          * When not set, the hostname is derived from {@link #endpoint} and
          * {@link #otlpPort}.
          */
@@ -297,7 +297,7 @@ public final class NirikshaAI {
 
         /**
          * Overrides the gRPC ingest address.
-         * Example: {@code grpc-ingest.niriksha.ai:4317}
+         * Example: {@code grpc-ingest.niriksha.ai:443}
          * <p>When not set, the hostname is parsed from {@link #endpoint} and combined
          * with {@link #otlpPort}.
          */

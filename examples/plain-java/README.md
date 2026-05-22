@@ -33,7 +33,7 @@ java -jar target/niriksha-plain-java-demo-0.1.0-jar-with-dependencies.jar
 |----------|---------|-------------|
 | `NIRIKSHA_API_KEY` | (required) | Your project API key |
 | `NIRIKSHA_ENDPOINT` | `https://app.niriksha.ai` | REST base URL |
-| `NIRIKSHA_OTLP_ENDPOINT` | `grpc-ingest.niriksha.ai:4317` | gRPC ingest address |
+| `NIRIKSHA_OTLP_ENDPOINT` | `grpc-ingest.niriksha.ai:443` | gRPC ingest address |
 | `NIRIKSHA_SERVICE_NAME` | `plain-java-demo` | OTel `service.name` |
 | `NIRIKSHA_ENVIRONMENT` | `production` | OTel `deployment.environment` |
 
