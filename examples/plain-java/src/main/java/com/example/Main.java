@@ -60,7 +60,7 @@ public final class Main {
         }
 
         String endpoint    = envOrDefault("NIRIKSHA_ENDPOINT",      "https://app.niriksha.ai");
-        String otlpAddr    = envOrDefault("NIRIKSHA_OTLP_ENDPOINT", "grpc-ingest.niriksha.ai:4317");
+        String otlpAddr    = envOrDefault("NIRIKSHA_OTLP_ENDPOINT", "grpc-ingest.niriksha.ai:443");
         String serviceName = envOrDefault("NIRIKSHA_SERVICE_NAME",  "plain-java-demo");
         String environment = envOrDefault("NIRIKSHA_ENVIRONMENT",   "production");
 

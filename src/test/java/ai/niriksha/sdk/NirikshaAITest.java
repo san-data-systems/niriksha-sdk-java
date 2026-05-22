@@ -64,11 +64,11 @@ class NirikshaAITest {
     void otlpEndpointOverride() {
         NirikshaAI.Builder builder = NirikshaAI.builder()
                 .endpoint("https://app.niriksha.ai")
-                .otlpEndpoint("grpc-ingest.niriksha.ai:4317");
+                .otlpEndpoint("grpc-ingest.niriksha.ai:443");
 
         String addr = builder.resolveGrpcAddress(true);
 
-        assertEquals("https://grpc-ingest.niriksha.ai:4317", addr,
+        assertEquals("https://grpc-ingest.niriksha.ai:443", addr,
                 "When otlpEndpoint is set it should override the derived address");
     }
 
@@ -77,15 +77,15 @@ class NirikshaAITest {
     void otlpEndpointSchemeStripping() {
         NirikshaAI.Builder builder = NirikshaAI.builder()
                 .endpoint("https://app.niriksha.ai")
-                .otlpEndpoint("https://grpc-ingest.niriksha.ai:4317");
+                .otlpEndpoint("https://grpc-ingest.niriksha.ai:443");
 
         // With insecure=false (TLS on), the scheme should be https://
         String addrTls = builder.resolveGrpcAddress(true);
-        assertEquals("https://grpc-ingest.niriksha.ai:4317", addrTls);
+        assertEquals("https://grpc-ingest.niriksha.ai:443", addrTls);
 
         // With insecure=true (TLS off), the scheme should be http://
         String addrPlain = builder.resolveGrpcAddress(false);
-        assertEquals("http://grpc-ingest.niriksha.ai:4317", addrPlain);
+        assertEquals("http://grpc-ingest.niriksha.ai:443", addrPlain);
     }
 
     // -----------------------------------------------------------------------
