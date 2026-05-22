@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
  * <ul>
  *   <li>{@code niriksha.api-key} — your project API key ({@code nai_...})</li>
  *   <li>{@code niriksha.endpoint} — REST base URL (default: {@code https://app.niriksha.ai})</li>
- *   <li>{@code niriksha.otlp-endpoint} — gRPC ingest address (default: {@code ingest.niriksha.ai:4317})</li>
+ *   <li>{@code niriksha.otlp-endpoint} — gRPC ingest address (default: {@code grpc-ingest.niriksha.ai:4317})</li>
  *   <li>{@code niriksha.service-name} — service name (default: {@code spring-boot-demo})</li>
  *   <li>{@code niriksha.environment} — deployment environment (default: {@code production})</li>
  * </ul>
@@ -32,7 +32,7 @@ public class NirikshaConfig {
     @Value("${niriksha.endpoint:https://app.niriksha.ai}")
     private String endpoint;
 
-    @Value("${niriksha.otlp-endpoint:ingest.niriksha.ai:4317}")
+    @Value("${niriksha.otlp-endpoint:grpc-ingest.niriksha.ai:4317}")
     private String otlpEndpoint;
 
     @Value("${niriksha.service-name:spring-boot-demo}")

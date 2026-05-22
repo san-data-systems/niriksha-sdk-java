@@ -38,7 +38,7 @@ import ai.niriksha.sdk.ShutdownHook;
 
 ShutdownHook hook = NirikshaAI.builder()
     .endpoint("https://app.niriksha.ai")
-    .otlpEndpoint("ingest.niriksha.ai:4317")
+    .otlpEndpoint("grpc-ingest.niriksha.ai:4317")
     .apiKey(System.getenv("NIRIKSHA_API_KEY"))
     .serviceName("my-service")
     .environment("production")
@@ -116,7 +116,7 @@ ShutdownHook hook = NirikshaAI.builder()
 | Builder method | Type | Default | Description |
 |----------------|------|---------|-------------|
 | `endpoint(String)` | `String` | — | REST base URL of the NirikshaAI instance, e.g. `https://app.niriksha.ai`. Used to derive the gRPC host when `otlpEndpoint` is not set. |
-| `otlpEndpoint(String)` | `String` | derived from `endpoint` | gRPC ingest address, e.g. `ingest.niriksha.ai:4317`. Overrides the auto-derived address. |
+| `otlpEndpoint(String)` | `String` | derived from `endpoint` | gRPC ingest address, e.g. `grpc-ingest.niriksha.ai:4317`. Overrides the auto-derived address. |
 | `apiKey(String)` | `String` | — **(required)** | Project API key (`nai_...`). Sent as the `x-api-key` gRPC header. |
 | `serviceName(String)` | `String` | `java-service` | OpenTelemetry `service.name` resource attribute. |
 | `environment(String)` | `String` | `production` | OpenTelemetry `deployment.environment` resource attribute. |

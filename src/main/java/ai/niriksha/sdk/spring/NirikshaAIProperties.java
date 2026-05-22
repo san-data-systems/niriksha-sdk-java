@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Example {@code application.properties}:
  * <pre>
  * nirikshaai.endpoint=https://app.niriksha.ai
- * nirikshaai.otlp-endpoint=ingest.niriksha.ai:4317
+ * nirikshaai.otlp-endpoint=grpc-ingest.niriksha.ai:4317
  * nirikshaai.api-key=nai_...
  * nirikshaai.service-name=my-spring-app
  * nirikshaai.environment=production
