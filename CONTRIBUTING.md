@@ -45,12 +45,19 @@ private static final Logger log = LoggerFactory.getLogger(MyClass.class);
 log.debug("processing request id={}", requestId);
 ```
 
-## Branch Naming
+## Branch Naming & Strategy
 
-- `feat/<description>` — new features
-- `fix/<description>` — bug fixes
-- `chore/<description>` — maintenance
-- `docs/<description>` — documentation only
+See [RELEASE.md](RELEASE.md) for the full branching strategy, Maven Central setup, and release process.
+
+| Branch prefix | Purpose | Merges into |
+|---------------|---------|-------------|
+| `feature/` | New features | `main` |
+| `fix/` | Bug fixes | `main` |
+| `hotfix/` | Urgent production patches | `main` |
+| `enhance/` | CI, docs, deps improvements | `main` |
+| `release/x.y.z` | Release preparation | `main` |
+
+**Rule:** Branch from `main`, PR back to `main`. Keep branches short-lived.
 
 ## Pull Request Process
 

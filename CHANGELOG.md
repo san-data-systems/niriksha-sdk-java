@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `dev-release.yml` workflow — auto-deploys `0.x.y-SNAPSHOT` to Maven Central on every merge to `main`
+- `RELEASE.md` — comprehensive versioning, branching, Maven Central setup, and release process guide
 - SLF4J API replacing `java.util.logging` — consumers provide their preferred binding
 - JaCoCo code coverage reporting (60% minimum gate)
 - Checkstyle with Google Java Style configuration
