@@ -11,10 +11,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Internal HTTP client for fetching versioned prompts from the NirikshaAI prompt vault.
@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
  */
 final class PromptClient {
 
-    private static final Logger LOGGER = Logger.getLogger(PromptClient.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(PromptClient.class);
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -115,7 +115,7 @@ final class PromptClient {
         } catch (NirikshaAIException e) {
             throw e;
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "NirikshaAI: prompt request error", e);
+            LOGGER.warn("NirikshaAI: prompt request error", e);
             throw new NirikshaAIException("Prompt request failed: " + e.getMessage(), e);
         }
     }

@@ -1,5 +1,10 @@
 # NirikshaAI Java SDK
 
+[![CI](https://github.com/san-data-systems/niriksha-sdk-java/actions/workflows/ci.yml/badge.svg)](https://github.com/san-data-systems/niriksha-sdk-java/actions/workflows/ci.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/ai.niriksha/niriksha-sdk-java.svg)](https://central.sonatype.com/artifact/ai.niriksha/niriksha-sdk-java)
+[![Javadoc](https://javadoc.io/badge2/ai.niriksha/niriksha-sdk-java/javadoc.svg)](https://javadoc.io/doc/ai.niriksha/niriksha-sdk-java)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 Official Java SDK for [NirikshaAI](https://niriksha.ai) — the AI-native observability platform
 for logs, metrics, traces, and AI insights.
 
@@ -20,6 +25,8 @@ with a single fluent builder call.
   <version>0.1.0</version>
 </dependency>
 ```
+
+> **Logging:** This SDK uses SLF4J for logging. Add your preferred SLF4J binding to your project (e.g., Logback, Log4j2). For quick local testing, add `slf4j-simple`.
 
 > Until the artifact is published to Maven Central, install it locally:
 > ```bash

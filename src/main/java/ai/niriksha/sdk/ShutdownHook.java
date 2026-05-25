@@ -7,8 +7,8 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider;
 
 import java.io.Closeable;
 import java.time.Duration;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Returned by {@link NirikshaAI.Builder#build()}. Holds a reference to the configured
@@ -30,7 +30,7 @@ import java.util.logging.Logger;
  */
 public final class ShutdownHook implements Closeable {
 
-    private static final Logger LOGGER = Logger.getLogger(ShutdownHook.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ShutdownHook.class);
     private static final Duration SHUTDOWN_TIMEOUT = Duration.ofSeconds(5);
 
     private final OpenTelemetrySdk openTelemetry;
@@ -81,7 +81,7 @@ public final class ShutdownHook implements Closeable {
     }
 
     private void shutdownProviders() {
-        LOGGER.fine("NirikshaAI: flushing and shutting down telemetry providers...");
+        LOGGER.debug("NirikshaAI: flushing and shutting down telemetry providers...");
 
         SdkTracerProvider tracerProvider = openTelemetry.getSdkTracerProvider();
         if (tracerProvider != null) {
@@ -107,6 +107,6 @@ public final class ShutdownHook implements Closeable {
                     java.util.concurrent.TimeUnit.MILLISECONDS);
         }
 
-        LOGGER.fine("NirikshaAI: telemetry shutdown complete.");
+        LOGGER.debug("NirikshaAI: telemetry shutdown complete.");
     }
 }
