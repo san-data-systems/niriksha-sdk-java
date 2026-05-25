@@ -1,6 +1,6 @@
 # Release Guide — niriksha-sdk-java
 
-> Product: [niriksha.ai](https://niriksha.ai)  
+> Product: [niriksha.ai](https://niriksha.ai) · Company: [sandatasystem.ai](https://sandatasystem.ai)  
 > Maintainer: vbhadauriya@redcloudcomputing.com
 
 ---
@@ -180,23 +180,47 @@ The `dev-release.yml` workflow automatically:
 
 ## Required Secrets & Setup (One-time)
 
-| Secret | Purpose | How to get |
-|--------|---------|-----------|
-| `OSSRH_USERNAME` | Sonatype Central username | [central.sonatype.com](https://central.sonatype.com) account |
-| `OSSRH_PASSWORD` | Sonatype Central password / token | Generate in Sonatype profile settings |
-| `GPG_PRIVATE_KEY` | Sign artifacts (Maven Central requirement) | `gpg --armor --export-secret-keys YOUR_KEY_ID` |
-| `GPG_PASSPHRASE` | Unlock GPG key | Your GPG key passphrase |
-| `GITHUB_TOKEN` | Create GitHub releases | Auto-provided by GitHub Actions |
-| `NVD_API_KEY` | Speed up OWASP scans | [nvd.nist.gov/developers](https://nvd.nist.gov/developers/request-an-api-key) (free) |
+> **Important:** All credentials below must be registered and generated under the **niriksha.ai product account** (`ai.niriksha` namespace on Sonatype, niriksha.ai GPG key). Do not use a personal developer account. This keeps niriksha publish credentials separate from other San Data Systems products.
 
-### Maven Central Setup (one-time)
-1. Register at [central.sonatype.com](https://central.sonatype.com)
-2. Verify ownership of the `ai.niriksha` namespace (DNS TXT record or GitHub org verification)
-3. Generate a deployment token (username + password)
-4. Generate a GPG key: `gpg --gen-key` (use 4096-bit RSA)
-5. Upload public key: `gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEY_ID`
-6. Export private key: `gpg --armor --export-secret-keys YOUR_KEY_ID | pbcopy`
-7. Add all secrets to GitHub → Settings → Secrets
+### Sonatype Central — Maven Central Publishing
+
+| Step | Action | URL |
+|------|--------|-----|
+| 1 | Register with the **niriksha.ai product email** | [central.sonatype.com/register](https://central.sonatype.com/register) |
+| 2 | Verify ownership of `ai.niriksha` namespace | [central.sonatype.com/publishing/namespaces](https://central.sonatype.com/publishing/namespaces) — add DNS TXT record or GitHub org verification |
+| 3 | Generate a deployment token | [central.sonatype.com/account](https://central.sonatype.com/account) → Profile → Generate User Token |
+| 4 | Add `OSSRH_USERNAME` + `OSSRH_PASSWORD` secrets | [github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions) |
+
+### GPG Signing Key — niriksha.ai product key
+
+| Step | Action | Command |
+|------|--------|---------|
+| 1 | Generate a GPG key for niriksha.ai (use `releases@niriksha.ai` as the email) | `gpg --gen-key` |
+| 2 | List keys to get your `KEY_ID` | `gpg --list-secret-keys --keyid-format LONG` |
+| 3 | Upload public key to keyserver | `gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEY_ID` |
+| 4 | Export private key (armored) | `gpg --armor --export-secret-keys YOUR_KEY_ID` |
+| 5 | Add `GPG_PRIVATE_KEY` secret (paste full `--BEGIN PGP...` output) | [github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions) |
+| 6 | Add `GPG_PASSPHRASE` secret | Same page |
+
+> Use `releases@niriksha.ai` (not a personal email) as the GPG key identity. This ties the signing key to the product, not an individual.
+
+### NVD API Key
+
+| Step | Action | URL |
+|------|--------|-----|
+| 1 | Request free NVD API key (niriksha.ai product email) | [nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key) |
+| 2 | Add secret `NVD_API_KEY` | [github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions) |
+
+### Secrets Summary
+
+| Secret | Value source |
+|--------|-------------|
+| `OSSRH_USERNAME` | Sonatype Central token username (niriksha.ai account) |
+| `OSSRH_PASSWORD` | Sonatype Central token password (niriksha.ai account) |
+| `GPG_PRIVATE_KEY` | Armored private key for `releases@niriksha.ai` GPG key |
+| `GPG_PASSPHRASE` | Passphrase for the GPG key above |
+| `GITHUB_TOKEN` | Auto-provided by GitHub Actions |
+| `NVD_API_KEY` | NVD API key registered to niriksha.ai product email |
 
 ### SLF4J Binding Note
 This SDK declares `slf4j-api` as a compile dependency. Consumers must add their preferred binding:
