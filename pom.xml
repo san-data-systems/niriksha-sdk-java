@@ -7,7 +7,7 @@
 
   <groupId>io.github.san-data-systems</groupId>
   <artifactId>niriksha-sdk-java</artifactId>
-  <version>0.1.0</version>
+  <version>0.0.1</version>
   <packaging>jar</packaging>
 
   <name>NirikshaAI Java SDK</name>
