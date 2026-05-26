@@ -1,0 +1,94 @@
+name: Dev Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: dev-release
+  cancel-in-progress: true
+
+jobs:
+  dev-release:
+    name: Deploy SNAPSHOT to Maven Central
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: temurin
+          cache: maven
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      - name: Read current version
+        id: ver
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout --batch-mode)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Set SNAPSHOT version
+        id: snapver
+        run: |
+          BASE="${{ steps.ver.outputs.version }}"
+          # Strip any existing -SNAPSHOT suffix, add fresh one
+          BASE="${BASE%-SNAPSHOT}"
+          SNAPSHOT="${BASE}-SNAPSHOT"
+          echo "snapshot=$SNAPSHOT" >> $GITHUB_OUTPUT
+          echo "Setting SNAPSHOT version: $SNAPSHOT"
+          mvn versions:set -DnewVersion="$SNAPSHOT" --batch-mode --no-transfer-progress -q
+
+      - name: Run tests (gate)
+        run: mvn test --batch-mode --no-transfer-progress
+
+      - name: Deploy SNAPSHOT to Maven Central
+        run: mvn deploy -P release --batch-mode --no-transfer-progress -DskipTests
+        env:
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Create GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.snapver.outputs.snapshot }}
+          name: "SNAPSHOT ${{ steps.snapver.outputs.snapshot }}"
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            🔧 **Automated SNAPSHOT build** — not for production use.
+
+            Add to your `pom.xml`:
+            ```xml
+            <dependency>
+              <groupId>io.github.san-data-systems</groupId>
+              <artifactId>niriksha-sdk-java</artifactId>
+              <version>${{ steps.snapver.outputs.snapshot }}</version>
+            </dependency>
+            ```
+
+            Add the SNAPSHOT repository:
+            ```xml
+            <repositories>
+              <repository>
+                <id>central-snapshots</id>
+                <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+                <snapshots><enabled>true</enabled></snapshots>
+              </repository>
+            </repositories>
+            ```
+
+            **Commit:** ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
