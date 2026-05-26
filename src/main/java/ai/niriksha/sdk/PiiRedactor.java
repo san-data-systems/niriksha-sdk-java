@@ -48,7 +48,7 @@ public final class PiiRedactor {
      * Applied last so it does not interfere with phone and SSN patterns.
      */
     static final Pattern CC_PATTERN = Pattern.compile(
-            "\\b(?:\\d[ \\-]?){13,16}\\b");
+            "\\b\\d{4}[- ]?\\d{4}[- ]?\\d{4}[- ]?\\d{0,4}\\b");
 
     private PiiRedactor() {}
 

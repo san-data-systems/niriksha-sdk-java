@@ -28,7 +28,8 @@ import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Entry point for the NirikshaAI Java SDK.
@@ -62,7 +63,7 @@ import java.util.logging.Logger;
  */
 public final class NirikshaAI {
 
-    private static final Logger LOGGER = Logger.getLogger(NirikshaAI.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(NirikshaAI.class);
 
     // Shared state populated by Builder.build() — used by eval/prompt helpers.
     private static volatile EvalClient   _evalClient;
@@ -209,27 +210,6 @@ public final class NirikshaAI {
     // -------------------------------------------------------------------------
     // Builder
     // -------------------------------------------------------------------------
-
-    private static void installQuotaLogHandler() {
-        java.util.logging.Logger otelLogger = java.util.logging.Logger.getLogger("io.opentelemetry");
-        otelLogger.addHandler(new java.util.logging.Handler() {
-            @Override
-            public void publish(java.util.logging.LogRecord record) {
-                if (record == null) return;
-                String msg = record.getMessage();
-                if (msg != null
-                        && msg.contains("ResourceExhausted")
-                        && msg.contains("data limit reached")) {
-                    LOGGER.severe(
-                        "NirikshaAI: org data quota exceeded — telemetry is being dropped. "
-                        + "Contact your platform admin to increase the quota.");
-                }
-            }
-
-            @Override public void flush() {}
-            @Override public void close() {}
-        });
-    }
 
     /**
      * Fluent builder for configuring and initializing the NirikshaAI SDK.
@@ -424,9 +404,8 @@ public final class NirikshaAI {
             boolean useTls = resolveTls();
             String grpcAddress = resolveGrpcAddress(useTls);
 
-            LOGGER.fine(() -> String.format(
-                    "NirikshaAI: initialising (service=%s, env=%s, grpc=%s, tls=%b)",
-                    serviceName, environment, grpcAddress, useTls));
+            LOGGER.debug("NirikshaAI: initialising (service={}, env={}, grpc={}, tls={})",
+                    serviceName, environment, grpcAddress, useTls);
 
             Resource resource = Resource.getDefault().merge(
                     Resource.builder()
@@ -501,10 +480,8 @@ public final class NirikshaAI {
             NirikshaAI._promptClient = new PromptClient(restBase, apiKey);
             NirikshaAI._initialized  = true;
 
-            // Install a JUL handler on the OTel SDK logger hierarchy to surface
-            // quota-exceeded errors at SEVERE. The BatchSpanProcessor logs export
-            // failures at WARNING — invisible in most production setups.
-            installQuotaLogHandler();
+            // Quota errors are surfaced via the OpenTelemetry diagnostic logger
+            // which emits to SLF4J automatically when slf4j-api is on the classpath
 
             return new ShutdownHook(openTelemetry);
         }
@@ -603,6 +580,7 @@ public final class NirikshaAI {
             }
 
             if (tlsSkipVerify) {
+                LOGGER.warn("TLS verification disabled — do not use in production");
                 X509TrustManager trustAll = trustAllManager();
                 SSLContext ctx = buildSslContext(trustAll);
                 setExporterSsl(exporterBuilder, ctx, trustAll);

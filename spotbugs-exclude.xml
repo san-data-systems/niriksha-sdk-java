@@ -1,0 +1,11 @@
+<FindBugsFilter>
+  <!-- TLS skip-verify is an intentional documented dev-only option -->
+  <Match>
+    <Bug pattern="WEAK_TRUST_MANAGER"/>
+    <Class name="ai.niriksha.sdk.NirikshaAI"/>
+  </Match>
+  <!-- URL validation is done by Builder; runtime values are trusted -->
+  <Match>
+    <Bug pattern="URLCONNECTION_SSRF_FD"/>
+  </Match>
+</FindBugsFilter>

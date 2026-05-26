@@ -7,8 +7,8 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Internal HTTP client for submitting evaluation results to the NirikshaAI REST API.
@@ -16,7 +16,7 @@ import java.util.logging.Logger;
  */
 final class EvalClient {
 
-    private static final Logger LOGGER = Logger.getLogger(EvalClient.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(EvalClient.class);
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -59,17 +59,16 @@ final class EvalClient {
         try {
             HttpResponse<String> resp = sendWithRetry(req);
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
-                LOGGER.log(Level.WARNING,
-                        "NirikshaAI: eval submission failed (status={0}): {1}",
-                        new Object[]{resp.statusCode(), resp.body()});
+                LOGGER.warn("NirikshaAI: eval submission failed (status={}): {}",
+                        resp.statusCode(), resp.body());
                 throw new NirikshaAIException(
                         "Eval submission failed with HTTP " + resp.statusCode() + ": " + resp.body());
             }
-            LOGGER.fine(() -> "NirikshaAI: submitted " + inputs.size() + " eval(s)");
+            LOGGER.debug("NirikshaAI: submitted {} eval(s)", inputs.size());
         } catch (NirikshaAIException e) {
             throw e;
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "NirikshaAI: eval submission error", e);
+            LOGGER.warn("NirikshaAI: eval submission error", e);
             throw new NirikshaAIException("Eval submission failed: " + e.getMessage(), e);
         }
     }
@@ -81,9 +80,9 @@ final class EvalClient {
             try {
                 HttpResponse<String> resp = HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
                 if (resp.statusCode() < 500) return resp; // success or 4xx (don't retry 4xx)
-                LOGGER.warning("NirikshaAI: eval attempt " + attempt + " got HTTP " + resp.statusCode());
+                LOGGER.warn("NirikshaAI: eval attempt {} got HTTP {}", attempt, resp.statusCode());
             } catch (Exception e) {
-                LOGGER.warning("NirikshaAI: eval attempt " + attempt + " failed: " + e.getMessage());
+                LOGGER.warn("NirikshaAI: eval attempt {} failed: {}", attempt, e.getMessage());
                 lastEx = e;
             }
             if (attempt < maxAttempts) Thread.sleep(attempt * 500L);

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+  <!-- Suppress false positives for opentelemetry-semconv alpha artifacts -->
+  <suppress>
+    <notes>opentelemetry-semconv alpha - no known CVEs, alpha status only</notes>
+    <packageUrl regex="true">^pkg:maven/io\.opentelemetry\.semconv/.*$</packageUrl>
+    <cpe>cpe:2.3:*:*:*:alpha:*:*:*:*:*:*:*</cpe>
+  </suppress>
+</suppressions>
