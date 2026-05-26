@@ -66,8 +66,8 @@ final class PromptClient {
             }
             for (Map.Entry<String, String> e : options.getVariables().entrySet()) {
                 url.append(first ? "?" : "&")
-                   .append("var[").append(URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8))
-                   .append("]=").append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8));
+                        .append("var[").append(URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8))
+                        .append("]=").append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8));
                 first = false;
             }
         }

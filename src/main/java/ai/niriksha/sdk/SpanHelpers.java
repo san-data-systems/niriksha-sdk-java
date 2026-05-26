@@ -60,7 +60,7 @@ public final class SpanHelpers {
      * @param turnIndex      zero-based position of this turn within the conversation
      */
     public static void recordConversation(Span span, String conversationId,
-                                          String sessionId, int turnIndex) {
+            String sessionId, int turnIndex) {
         if (conversationId != null) {
             span.setAttribute(KEY_CONV_ID, conversationId);
         }

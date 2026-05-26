@@ -19,7 +19,7 @@ public final class PromptResponse {
     private final String updatedAt;
 
     PromptResponse(String name, int version, String text, String description,
-                   List<String> tags, String createdAt, String updatedAt) {
+            List<String> tags, String createdAt, String updatedAt) {
         this.name        = name;
         this.version     = version;
         this.text        = text;
