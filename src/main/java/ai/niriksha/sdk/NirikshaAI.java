@@ -7,6 +7,7 @@ import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporterBuilder;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporterBuilder;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.SdkOpenTelemetryBuilder;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
@@ -464,7 +465,7 @@ public final class NirikshaAI {
             }
 
             // -- Assemble SDK and register globals --
-            OpenTelemetrySdk.Builder sdkBuilder = OpenTelemetrySdk.builder()
+            SdkOpenTelemetryBuilder sdkBuilder = OpenTelemetrySdk.builder()
                     .setTracerProvider(tracerProvider);
 
             if (meterProvider != null) {
