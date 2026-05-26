@@ -137,12 +137,18 @@ final class PromptClient {
 
     List<PromptResponse> parsePromptList(String json) {
         List<PromptResponse> result = new ArrayList<>();
-        // Split on top-level objects — find each {...} block in the data array
+        // Find the first '[' to locate the array, then parse each {...} within it
+        int arrayStart = json.indexOf('[');
+        if (arrayStart < 0) {
+            return result;
+        }
         int depth = 0;
         int start = -1;
-        for (int i = 0; i < json.length(); i++) {
+        for (int i = arrayStart + 1; i < json.length(); i++) {
             char c = json.charAt(i);
-            if (c == '{') {
+            if (c == ']' && depth == 0) {
+                break; // end of array
+            } else if (c == '{') {
                 if (depth == 0) {
                     start = i;
                 }
