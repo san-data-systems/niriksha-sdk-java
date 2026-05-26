@@ -28,12 +28,18 @@ public final class GetPromptOptions {
     }
 
     /** Specific version to fetch, or {@code null} for the latest deployed version. */
-    public Integer getVersion()              { return version; }
+    public Integer getVersion() {
+        return version;
+    }
 
     /** Variable substitutions applied server-side ({@code {{key}}} → value). */
-    public Map<String, String> getVariables() { return variables; }
+    public Map<String, String> getVariables() {
+        return variables;
+    }
 
-    public static Builder builder() { return new Builder(); }
+    public static Builder builder() {
+        return new Builder();
+    }
 
     public static final class Builder {
         private Integer version;
@@ -59,6 +65,8 @@ public final class GetPromptOptions {
             return this;
         }
 
-        public GetPromptOptions build() { return new GetPromptOptions(this); }
+        public GetPromptOptions build() {
+            return new GetPromptOptions(this);
+        }
     }
 }

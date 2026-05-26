@@ -55,18 +55,49 @@ public final class EvalInput {
         this.evalTime     = b.evalTime;
     }
 
-    public String              getTraceId()      { return traceId; }
-    public String              getMetricName()   { return metricName; }
-    public double              getScore()        { return score; }
-    public String              getLabel()        { return label; }
-    public String              getExplanation()  { return explanation; }
-    public String              getEvalType()     { return evalType; }
-    public String              getExperimentId() { return experimentId; }
-    public Double              getConfidence()   { return confidence; }
-    public Map<String, String> getMetadata()     { return metadata; }
-    public Instant             getEvalTime()     { return evalTime; }
+    public String getTraceId() {
+        return traceId;
+    }
 
-    public static Builder builder() { return new Builder(); }
+    public String getMetricName() {
+        return metricName;
+    }
+
+    public double getScore() {
+        return score;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public String getExplanation() {
+        return explanation;
+    }
+
+    public String getEvalType() {
+        return evalType;
+    }
+
+    public String getExperimentId() {
+        return experimentId;
+    }
+
+    public Double getConfidence() {
+        return confidence;
+    }
+
+    public Map<String, String> getMetadata() {
+        return metadata;
+    }
+
+    public Instant getEvalTime() {
+        return evalTime;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
 
     public static final class Builder {
         private String traceId;
@@ -132,7 +163,9 @@ public final class EvalInput {
 
         /** Arbitrary context metadata. Optional. */
         public Builder metadata(Map<String, String> metadata) {
-            if (metadata != null) this.metadata.putAll(metadata);
+            if (metadata != null) {
+                this.metadata.putAll(metadata);
+            }
             return this;
         }
 
@@ -143,12 +176,15 @@ public final class EvalInput {
         }
 
         public EvalInput build() {
-            if (traceId == null || traceId.isBlank())
+            if (traceId == null || traceId.isBlank()) {
                 throw new IllegalStateException("EvalInput: traceId is required");
-            if (metricName == null || metricName.isBlank())
+            }
+            if (metricName == null || metricName.isBlank()) {
                 throw new IllegalStateException("EvalInput: metricName is required");
-            if (score < 0 || score > 1)
+            }
+            if (score < 0 || score > 1) {
                 throw new IllegalStateException("EvalInput: score must be in [0, 1]");
+            }
             return new EvalInput(this);
         }
     }

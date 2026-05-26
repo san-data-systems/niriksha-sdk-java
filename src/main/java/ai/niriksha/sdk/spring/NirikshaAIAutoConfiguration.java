@@ -33,8 +33,12 @@ public class NirikshaAIAutoConfiguration {
                 .insecure(props.isInsecure())
                 .tlsSkipVerify(props.isTlsSkipVerify());
 
-        if (props.getOtlpEndpoint() != null) builder.otlpEndpoint(props.getOtlpEndpoint());
-        if (props.getCaCertFile() != null)   builder.caCertFile(props.getCaCertFile());
+        if (props.getOtlpEndpoint() != null) {
+            builder.otlpEndpoint(props.getOtlpEndpoint());
+        }
+        if (props.getCaCertFile() != null) {
+            builder.caCertFile(props.getCaCertFile());
+        }
 
         return builder.build();
     }

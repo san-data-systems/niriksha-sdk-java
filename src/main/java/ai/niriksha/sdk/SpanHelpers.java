@@ -85,7 +85,9 @@ public final class SpanHelpers {
      * @throws NullPointerException if {@code chunk} is null
      */
     public static void recordRagChunk(Span span, RagChunk chunk) {
-        if (chunk == null) throw new NullPointerException("SpanHelpers.recordRagChunk: chunk must not be null");
+        if (chunk == null) {
+            throw new NullPointerException("SpanHelpers.recordRagChunk: chunk must not be null");
+        }
 
         Attributes.Builder attrs = Attributes.builder()
                 .put(KEY_RAG_CHUNK_ID, chunk.getChunkId())
@@ -115,7 +117,9 @@ public final class SpanHelpers {
      * @throws NullPointerException if {@code call} is null
      */
     public static void recordToolCall(Span span, ToolCall call) {
-        if (call == null) throw new NullPointerException("SpanHelpers.recordToolCall: call must not be null");
+        if (call == null) {
+            throw new NullPointerException("SpanHelpers.recordToolCall: call must not be null");
+        }
 
         Attributes.Builder attrs = Attributes.builder()
                 .put(KEY_TOOL_NAME,    call.getToolName())

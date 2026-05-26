@@ -29,25 +29,35 @@ public final class ToolCall {
     }
 
     /** Name of the tool or function being called. */
-    public String getToolName() { return toolName; }
+    public String getToolName() {
+        return toolName;
+    }
 
     /** Unique call identifier assigned by the LLM (e.g. OpenAI's {@code tool_call_id}). */
-    public String getCallId() { return callId; }
+    public String getCallId() {
+        return callId;
+    }
 
     /**
      * JSON-serialised input arguments, or {@code null} if not captured.
      * Avoid recording arguments that may contain PII; use {@link PiiRedactor} first.
      */
-    public String getInput() { return input; }
+    public String getInput() {
+        return input;
+    }
 
     /**
      * JSON-serialised output returned by the tool, or {@code null} if not captured.
      * Avoid recording output that may contain PII; use {@link PiiRedactor} first.
      */
-    public String getOutput() { return output; }
+    public String getOutput() {
+        return output;
+    }
 
     /** Returns a new {@link Builder}. */
-    public static Builder builder() { return new Builder(); }
+    public static Builder builder() {
+        return new Builder();
+    }
 
     /** Fluent builder for {@link ToolCall}. */
     public static final class Builder {
@@ -89,10 +99,12 @@ public final class ToolCall {
          * @throws IllegalStateException if {@code toolName} or {@code callId} is blank or null
          */
         public ToolCall build() {
-            if (toolName == null || toolName.isBlank())
+            if (toolName == null || toolName.isBlank()) {
                 throw new IllegalStateException("ToolCall: toolName is required");
-            if (callId == null || callId.isBlank())
+            }
+            if (callId == null || callId.isBlank()) {
                 throw new IllegalStateException("ToolCall: callId is required");
+            }
             return new ToolCall(this);
         }
     }

@@ -45,7 +45,9 @@ final class EvalClient {
      * @throws NirikshaAIException if the server returns a non-2xx response
      */
     void submitEvalsBatch(List<EvalInput> inputs) {
-        if (inputs == null || inputs.isEmpty()) return;
+        if (inputs == null || inputs.isEmpty()) {
+            return;
+        }
 
         String body = buildBatchJson(inputs);
         HttpRequest req = HttpRequest.newBuilder()
@@ -79,13 +81,17 @@ final class EvalClient {
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 HttpResponse<String> resp = HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
-                if (resp.statusCode() < 500) return resp; // success or 4xx (don't retry 4xx)
+                if (resp.statusCode() < 500) {
+                    return resp; // success or 4xx (don't retry 4xx)
+                }
                 LOGGER.warn("NirikshaAI: eval attempt {} got HTTP {}", attempt, resp.statusCode());
             } catch (Exception e) {
                 LOGGER.warn("NirikshaAI: eval attempt {} failed: {}", attempt, e.getMessage());
                 lastEx = e;
             }
-            if (attempt < maxAttempts) Thread.sleep(attempt * 500L);
+            if (attempt < maxAttempts) {
+                Thread.sleep(attempt * 500L);
+            }
         }
         throw lastEx != null ? lastEx : new NirikshaAIException("Eval failed after " + maxAttempts + " attempts");
     }
@@ -93,7 +99,9 @@ final class EvalClient {
     private String buildBatchJson(List<EvalInput> inputs) {
         StringBuilder sb = new StringBuilder("{\"evals\":[");
         for (int i = 0; i < inputs.size(); i++) {
-            if (i > 0) sb.append(',');
+            if (i > 0) {
+                sb.append(',');
+            }
             sb.append(toJson(inputs.get(i)));
         }
         sb.append("]}");
@@ -120,7 +128,9 @@ final class EvalClient {
             sb.append(",\"metadata\":{");
             boolean first = true;
             for (Map.Entry<String, String> entry : e.getMetadata().entrySet()) {
-                if (!first) sb.append(',');
+                if (!first) {
+                    sb.append(',');
+                }
                 sb.append(jsonString(entry.getKey())).append(':').append(jsonString(entry.getValue()));
                 first = false;
             }
@@ -134,7 +144,9 @@ final class EvalClient {
     }
 
     private String jsonString(String s) {
-        if (s == null) return "null";
+        if (s == null) {
+            return "null";
+        }
         return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 }
