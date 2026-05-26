@@ -37,7 +37,7 @@ public final class PiiRedactor {
      * {@code (555) 867-5309}, {@code 555-867-5309}, {@code +1 555 867 5309}, etc.
      */
     static final Pattern PHONE_PATTERN = Pattern.compile(
-            "(\\+?1[\\s.\\-]?)?\\(?\\d{3}\\)?[\\s.\\-]?\\d{3}[\\s.\\-]?\\d{4}");
+            "(?:\\+?1[\\s.\\-]?)?\\(?\\d{3,3}\\)?[\\s.\\-]?\\d{3,3}[\\s.\\-]?\\d{4,4}");
 
     /** Matches US Social Security Numbers in {@code NNN-NN-NNNN} format. */
     static final Pattern SSN_PATTERN = Pattern.compile(

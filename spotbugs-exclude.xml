@@ -1,11 +1,18 @@
 <FindBugsFilter>
-  <!-- TLS skip-verify is an intentional documented dev-only option -->
+  <!-- TLS skip-verify is an intentional documented dev-only option.
+       Matches NirikshaAI and its inner anonymous TrustManager class. -->
   <Match>
     <Bug pattern="WEAK_TRUST_MANAGER"/>
-    <Class name="ai.niriksha.sdk.NirikshaAI"/>
+    <Class name="~ai\.niriksha\.sdk\.NirikshaAI(\$.+)?"/>
   </Match>
   <!-- URL validation is done by Builder; runtime values are trusted -->
   <Match>
     <Bug pattern="URLCONNECTION_SSRF_FD"/>
+  </Match>
+  <!-- Builder intentionally writes SDK state to static fields on NirikshaAI.
+       This is a deliberate static-factory pattern — the SDK is a singleton. -->
+  <Match>
+    <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
+    <Class name="ai.niriksha.sdk.NirikshaAI$Builder"/>
   </Match>
 </FindBugsFilter>
