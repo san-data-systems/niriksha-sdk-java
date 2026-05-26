@@ -1,12 +1,10 @@
 <?xml version="1.0"?>
 <!DOCTYPE suppressions PUBLIC
   "-//Checkstyle//DTD SuppressionList Configuration 1.2//EN"
-  "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+  "https://checkstyle.sourceforge.io/dtds/suppressions_1_2.dtd">
 <suppressions>
-  <!-- Suppress line length for generated code and URLs -->
-  <suppress checks="LineLength" files=".*\.java" message=".*https?://.*"/>
-  <!-- Suppress Javadoc requirement on private methods -->
+  <!-- Test files: relax Javadoc and line length requirements -->
   <suppress checks="MissingJavadocMethod" files=".*Test\.java"/>
-  <!-- Allow longer lines in test files -->
+  <suppress checks="MissingJavadocType" files=".*Test\.java"/>
   <suppress checks="LineLength" files=".*Test\.java"/>
 </suppressions>
