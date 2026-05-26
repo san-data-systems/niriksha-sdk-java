@@ -15,4 +15,12 @@
     <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
     <Class name="ai.niriksha.sdk.NirikshaAI$Builder"/>
   </Match>
+  <!-- PiiRedactor phone/CC patterns use possessive quantifiers (?+, {n}+)
+       throughout, which prevent all backtracking by design.  FindSecBugs'
+       REDOS heuristic is pattern-based and does not recognise possessive
+       quantifiers, so it issues a false-positive here. -->
+  <Match>
+    <Bug pattern="REDOS"/>
+    <Class name="ai.niriksha.sdk.PiiRedactor"/>
+  </Match>
 </FindBugsFilter>
