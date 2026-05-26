@@ -11,6 +11,7 @@ import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
@@ -66,9 +67,9 @@ public final class NirikshaAI {
     private static final Logger LOGGER = LoggerFactory.getLogger(NirikshaAI.class);
 
     // Shared state populated by Builder.build() — used by eval/prompt helpers.
-    private static volatile EvalClient   _evalClient;
-    private static volatile PromptClient _promptClient;
-    private static volatile boolean      _initialized;
+    private static volatile EvalClient evalClient;
+    private static volatile PromptClient promptClient;
+    private static volatile boolean initialized;
 
     private NirikshaAI() {
         // utility class — use builder()
@@ -86,7 +87,7 @@ public final class NirikshaAI {
      * {@link Builder#build()}.
      */
     public static boolean isInitialized() {
-        return _initialized;
+        return initialized;
     }
 
     /**
@@ -108,14 +109,14 @@ public final class NirikshaAI {
         var otel = io.opentelemetry.api.GlobalOpenTelemetry.get();
         if (otel instanceof io.opentelemetry.sdk.OpenTelemetrySdk sdk) {
             sdk.getSdkTracerProvider()
-               .forceFlush()
-               .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    .forceFlush()
+                    .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
             sdk.getSdkMeterProvider()
-               .forceFlush()
-               .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    .forceFlush()
+                    .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
             sdk.getSdkLoggerProvider()
-               .forceFlush()
-               .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    .forceFlush()
+                    .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
         }
     }
 
@@ -188,22 +189,26 @@ public final class NirikshaAI {
 
     /** Package-private — for test teardown only. Resets SDK state between tests. */
     static void resetForTest() {
-        _evalClient   = null;
-        _promptClient = null;
-        _initialized  = false;
+        evalClient = null;
+        promptClient = null;
+        initialized = false;
     }
 
     private static EvalClient evalClient() {
-        EvalClient c = _evalClient;
-        if (c == null) throw new IllegalStateException(
-                "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
+        EvalClient c = evalClient;
+        if (c == null) {
+            throw new IllegalStateException(
+                    "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
+        }
         return c;
     }
 
     private static PromptClient promptClient() {
-        PromptClient c = _promptClient;
-        if (c == null) throw new IllegalStateException(
-                "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
+        PromptClient c = promptClient;
+        if (c == null) {
+            throw new IllegalStateException(
+                    "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
+        }
         return c;
     }
 
@@ -411,8 +416,8 @@ public final class NirikshaAI {
                     Resource.builder()
                             .put(ResourceAttributes.SERVICE_NAME, serviceName)
                             .put(ResourceAttributes.DEPLOYMENT_ENVIRONMENT, environment)
-                            .put(io.opentelemetry.api.common.AttributeKey.stringKey("telemetry.sdk.version"), SdkVersion.VERSION)
-                            .put(io.opentelemetry.api.common.AttributeKey.stringKey("telemetry.sdk.language"), SdkVersion.LANGUAGE)
+                            .put(AttributeKey.stringKey("telemetry.sdk.version"), SdkVersion.VERSION)
+                            .put(AttributeKey.stringKey("telemetry.sdk.language"), SdkVersion.LANGUAGE)
                             .build());
 
             // -- Trace exporter --
@@ -459,7 +464,7 @@ public final class NirikshaAI {
             }
 
             // -- Assemble SDK and register globals --
-            OpenTelemetrySdk.Builder sdkBuilder = OpenTelemetrySdk.builder()
+            var sdkBuilder = OpenTelemetrySdk.builder()
                     .setTracerProvider(tracerProvider);
 
             if (meterProvider != null) {
@@ -476,9 +481,9 @@ public final class NirikshaAI {
 
             // Wire eval and prompt helpers — use REST endpoint as the base URL.
             String restBase = endpoint != null ? endpoint : "https://app.niriksha.ai";
-            NirikshaAI._evalClient   = new EvalClient(restBase, apiKey);
-            NirikshaAI._promptClient = new PromptClient(restBase, apiKey);
-            NirikshaAI._initialized  = true;
+            NirikshaAI.evalClient = new EvalClient(restBase, apiKey);
+            NirikshaAI.promptClient = new PromptClient(restBase, apiKey);
+            NirikshaAI.initialized = true;
 
             // Quota errors are surfaced via the OpenTelemetry diagnostic logger
             // which emits to SLF4J automatically when slf4j-api is on the classpath
@@ -526,8 +531,12 @@ public final class NirikshaAI {
         }
 
         private String stripScheme(String addr) {
-            if (addr.startsWith("https://")) return addr.substring(8);
-            if (addr.startsWith("http://"))  return addr.substring(7);
+            if (addr.startsWith("https://")) {
+                return addr.substring(8);
+            }
+            if (addr.startsWith("http://")) {
+                return addr.substring(7);
+            }
             return addr;
         }
 
@@ -626,10 +635,14 @@ public final class NirikshaAI {
         private X509TrustManager trustAllManager() {
             return new X509TrustManager() {
                 @Override
-                public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                    // intentionally empty — trust-all manager for dev/test only
+                }
 
                 @Override
-                public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+                public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                    // intentionally empty — trust-all manager for dev/test only
+                }
 
                 @Override
                 public X509Certificate[] getAcceptedIssuers() {

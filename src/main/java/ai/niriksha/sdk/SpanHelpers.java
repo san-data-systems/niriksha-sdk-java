@@ -2,6 +2,7 @@ package ai.niriksha.sdk;
 
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.trace.Span;
 
 /**
@@ -59,7 +60,7 @@ public final class SpanHelpers {
      * @param turnIndex      zero-based position of this turn within the conversation
      */
     public static void recordConversation(Span span, String conversationId,
-                                          String sessionId, int turnIndex) {
+            String sessionId, int turnIndex) {
         if (conversationId != null) {
             span.setAttribute(KEY_CONV_ID, conversationId);
         }
@@ -85,9 +86,11 @@ public final class SpanHelpers {
      * @throws NullPointerException if {@code chunk} is null
      */
     public static void recordRagChunk(Span span, RagChunk chunk) {
-        if (chunk == null) throw new NullPointerException("SpanHelpers.recordRagChunk: chunk must not be null");
+        if (chunk == null) {
+            throw new NullPointerException("SpanHelpers.recordRagChunk: chunk must not be null");
+        }
 
-        Attributes.Builder attrs = Attributes.builder()
+        AttributesBuilder attrs = Attributes.builder()
                 .put(KEY_RAG_CHUNK_ID, chunk.getChunkId())
                 .put(KEY_RAG_SOURCE,   chunk.getSource())
                 .put(KEY_RAG_SCORE,    chunk.getScore());
@@ -115,9 +118,11 @@ public final class SpanHelpers {
      * @throws NullPointerException if {@code call} is null
      */
     public static void recordToolCall(Span span, ToolCall call) {
-        if (call == null) throw new NullPointerException("SpanHelpers.recordToolCall: call must not be null");
+        if (call == null) {
+            throw new NullPointerException("SpanHelpers.recordToolCall: call must not be null");
+        }
 
-        Attributes.Builder attrs = Attributes.builder()
+        AttributesBuilder attrs = Attributes.builder()
                 .put(KEY_TOOL_NAME,    call.getToolName())
                 .put(KEY_TOOL_CALL_ID, call.getCallId());
 

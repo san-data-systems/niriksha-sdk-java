@@ -19,7 +19,7 @@ public final class PromptResponse {
     private final String updatedAt;
 
     PromptResponse(String name, int version, String text, String description,
-                   List<String> tags, String createdAt, String updatedAt) {
+            List<String> tags, String createdAt, String updatedAt) {
         this.name        = name;
         this.version     = version;
         this.text        = text;
@@ -30,25 +30,39 @@ public final class PromptResponse {
     }
 
     /** Unique slug identifier for this prompt. */
-    public String getName()        { return name; }
+    public String getName() {
+        return name;
+    }
 
     /** Active deployed version number. */
-    public int getVersion()        { return version; }
+    public int getVersion() {
+        return version;
+    }
 
     /** Rendered prompt text with all variables substituted. */
-    public String getText()        { return text; }
+    public String getText() {
+        return text;
+    }
 
     /** Human-readable description of what this prompt does. */
-    public String getDescription() { return description; }
+    public String getDescription() {
+        return description;
+    }
 
     /** Tags associated with this prompt. Never {@code null}; may be empty. */
-    public List<String> getTags()  { return tags; }
+    public List<String> getTags() {
+        return tags;
+    }
 
     /** ISO-8601 creation timestamp, or empty string if not provided. */
-    public String getCreatedAt()   { return createdAt; }
+    public String getCreatedAt() {
+        return createdAt;
+    }
 
     /** ISO-8601 last-updated timestamp, or empty string if not provided. */
-    public String getUpdatedAt()   { return updatedAt; }
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
 
     @Override
     public String toString() {

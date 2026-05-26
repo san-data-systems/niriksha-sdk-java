@@ -30,10 +30,10 @@ final class PromptClient {
             .build();
 
     // In-memory prompt cache with TTL
-    private static final ConcurrentHashMap<String, _CacheEntry> CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, CacheEntry> CACHE = new ConcurrentHashMap<>();
     private static final long CACHE_TTL_MS = 5 * 60 * 1000L;
 
-    private record _CacheEntry(PromptResponse response, long expiresAt) {}
+    private record CacheEntry(PromptResponse response, long expiresAt) {}
 
     private final String baseUrl;
     private final String apiKey;
@@ -49,7 +49,7 @@ final class PromptClient {
      */
     PromptResponse getPrompt(String name, GetPromptOptions options) {
         String key = cacheKey(name, options);
-        _CacheEntry cached = CACHE.get(key);
+        CacheEntry cached = CACHE.get(key);
         if (cached != null && System.currentTimeMillis() < cached.expiresAt()) {
             return cached.response();
         }
@@ -66,15 +66,15 @@ final class PromptClient {
             }
             for (Map.Entry<String, String> e : options.getVariables().entrySet()) {
                 url.append(first ? "?" : "&")
-                   .append("var[").append(URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8))
-                   .append("]=").append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8));
+                        .append("var[").append(URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8))
+                        .append("]=").append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8));
                 first = false;
             }
         }
 
         String body = get(url.toString());
         PromptResponse response = parsePromptResponse(body);
-        CACHE.put(key, new _CacheEntry(response, System.currentTimeMillis() + CACHE_TTL_MS));
+        CACHE.put(key, new CacheEntry(response, System.currentTimeMillis() + CACHE_TTL_MS));
         return response;
     }
 
@@ -137,13 +137,21 @@ final class PromptClient {
 
     List<PromptResponse> parsePromptList(String json) {
         List<PromptResponse> result = new ArrayList<>();
-        // Split on top-level objects — find each {...} block in the data array
+        // Find the first '[' to locate the array, then parse each {...} within it
+        int arrayStart = json.indexOf('[');
+        if (arrayStart < 0) {
+            return result;
+        }
         int depth = 0;
         int start = -1;
-        for (int i = 0; i < json.length(); i++) {
+        for (int i = arrayStart + 1; i < json.length(); i++) {
             char c = json.charAt(i);
-            if (c == '{') {
-                if (depth == 0) start = i;
+            if (c == ']' && depth == 0) {
+                break; // end of array
+            } else if (c == '{') {
+                if (depth == 0) {
+                    start = i;
+                }
                 depth++;
             } else if (c == '}') {
                 depth--;
@@ -164,25 +172,33 @@ final class PromptClient {
     private String extractString(String json, String key) {
         Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
         Matcher m = p.matcher(json);
-        if (m.find()) return m.group(1).replace("\\\"", "\"").replace("\\\\", "\\");
+        if (m.find()) {
+            return m.group(1).replace("\\\"", "\"").replace("\\\\", "\\");
+        }
         return "";
     }
 
     private List<String> extractStringArray(String json, String key) {
         Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*\\[([^\\]]*)\\]");
         Matcher m = p.matcher(json);
-        if (!m.find()) return List.of();
+        if (!m.find()) {
+            return List.of();
+        }
         String inner = m.group(1);
         List<String> result = new ArrayList<>();
         Matcher items = Pattern.compile("\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(inner);
-        while (items.find()) result.add(items.group(1));
+        while (items.find()) {
+            result.add(items.group(1));
+        }
         return result;
     }
 
     private int extractInt(String json, String key) {
         Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*(\\d+)");
         Matcher m = p.matcher(json);
-        if (m.find()) return Integer.parseInt(m.group(1));
+        if (m.find()) {
+            return Integer.parseInt(m.group(1));
+        }
         return 0;
     }
 

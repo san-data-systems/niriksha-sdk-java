@@ -35,9 +35,12 @@ public final class PiiRedactor {
     /**
      * Matches US phone numbers in common formats:
      * {@code (555) 867-5309}, {@code 555-867-5309}, {@code +1 555 867 5309}, etc.
+     *
+     * <p>Possessive quantifiers ({@code ?+}, {@code ++}) are used throughout to prevent
+     * any backtracking and eliminate the risk of catastrophic ReDoS.
      */
     static final Pattern PHONE_PATTERN = Pattern.compile(
-            "(\\+?1[\\s.\\-]?)?\\(?\\d{3}\\)?[\\s.\\-]?\\d{3}[\\s.\\-]?\\d{4}");
+            "(?:\\+?+1[\\s.\\-]?+)?+\\(?+\\d{3}\\)?+[\\s.\\-]?+\\d{3}[\\s.\\-]?+\\d{4}");
 
     /** Matches US Social Security Numbers in {@code NNN-NN-NNNN} format. */
     static final Pattern SSN_PATTERN = Pattern.compile(
@@ -46,9 +49,11 @@ public final class PiiRedactor {
     /**
      * Matches 13–16 digit card numbers, optionally separated by single spaces or dashes.
      * Applied last so it does not interfere with phone and SSN patterns.
+     *
+     * <p>Possessive quantifiers ({@code ?+}) prevent backtracking on the optional separators.
      */
     static final Pattern CC_PATTERN = Pattern.compile(
-            "\\b\\d{4}[- ]?\\d{4}[- ]?\\d{4}[- ]?\\d{0,4}\\b");
+            "\\b\\d{4}[- ]?+\\d{4}[- ]?+\\d{4}[- ]?+\\d{0,4}\\b");
 
     private PiiRedactor() {}
 
