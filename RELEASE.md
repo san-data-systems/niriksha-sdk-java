@@ -204,12 +204,8 @@ The `dev-release.yml` workflow automatically:
 
 > Use `releases@niriksha.ai` (not a personal email) as the GPG key identity. This ties the signing key to the product, not an individual.
 
-### NVD API Key
-
 | Step | Action | URL |
 |------|--------|-----|
-| 1 | Request free NVD API key (niriksha.ai product email) | [nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key) |
-| 2 | Add secret `NVD_API_KEY` | [github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions) |
 
 ### Secrets Summary
 
@@ -220,7 +216,6 @@ The `dev-release.yml` workflow automatically:
 | `GPG_PRIVATE_KEY` | Armored private key for `releases@niriksha.ai` GPG key |
 | `GPG_PASSPHRASE` | Passphrase for the GPG key above |
 | `GITHUB_TOKEN` | Auto-provided by GitHub Actions |
-| `NVD_API_KEY` | NVD API key registered to niriksha.ai product email |
 
 ### SLF4J Binding Note
 This SDK declares `slf4j-api` as a compile dependency. Consumers must add their preferred binding:
