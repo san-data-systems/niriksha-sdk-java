@@ -34,7 +34,7 @@ MAJOR . MINOR . PATCH
 **Stable release:**
 ```xml
 <dependency>
-  <groupId>ai.niriksha</groupId>
+  <groupId>io.github.san-data-systems</groupId>
   <artifactId>niriksha-sdk-java</artifactId>
   <version>0.1.0</version>
 </dependency>
@@ -51,7 +51,7 @@ MAJOR . MINOR . PATCH
 </repositories>
 
 <dependency>
-  <groupId>ai.niriksha</groupId>
+  <groupId>io.github.san-data-systems</groupId>
   <artifactId>niriksha-sdk-java</artifactId>
   <version>0.1.1-SNAPSHOT</version>
 </dependency>
@@ -59,7 +59,7 @@ MAJOR . MINOR . PATCH
 
 **Gradle (stable):**
 ```kotlin
-implementation("ai.niriksha:niriksha-sdk-java:0.1.0")
+implementation("io.github.san-data-systems:niriksha-sdk-java:0.1.0")
 ```
 
 **Gradle (SNAPSHOT):**
@@ -70,7 +70,7 @@ repositories {
         mavenContent { snapshotsOnly() }
     }
 }
-implementation("ai.niriksha:niriksha-sdk-java:0.1.1-SNAPSHOT")
+implementation("io.github.san-data-systems:niriksha-sdk-java:0.1.1-SNAPSHOT")
 ```
 
 ---
@@ -180,14 +180,14 @@ The `dev-release.yml` workflow automatically:
 
 ## Required Secrets & Setup (One-time)
 
-> **Important:** All credentials below must be registered and generated under the **niriksha.ai product account** (`ai.niriksha` namespace on Sonatype, niriksha.ai GPG key). Do not use a personal developer account. This keeps niriksha publish credentials separate from other San Data Systems products.
+> **Important:** All credentials below must be registered and generated under the **niriksha.ai product account** (`io.github.san-data-systems` namespace on Sonatype). Do not use a personal developer account. This keeps niriksha publish credentials separate from other San Data Systems products.
 
 ### Sonatype Central — Maven Central Publishing
 
 | Step | Action | URL |
 |------|--------|-----|
-| 1 | Register with the **niriksha.ai product email** | [central.sonatype.com/register](https://central.sonatype.com/register) |
-| 2 | Verify ownership of `ai.niriksha` namespace | [central.sonatype.com/publishing/namespaces](https://central.sonatype.com/publishing/namespaces) — add DNS TXT record or GitHub org verification |
+| 1 | Sign in with GitHub (use `san-data-systems` org account) | [central.sonatype.com/sign-up](https://central.sonatype.com/sign-up) |
+| 2 | Verify `io.github.san-data-systems` namespace via GitHub org — no DNS needed | [central.sonatype.com/publishing/namespaces](https://central.sonatype.com/publishing/namespaces) |
 | 3 | Generate a deployment token | [central.sonatype.com/account](https://central.sonatype.com/account) → Profile → Generate User Token |
 | 4 | Add `OSSRH_USERNAME` + `OSSRH_PASSWORD` secrets | [github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions) |
 

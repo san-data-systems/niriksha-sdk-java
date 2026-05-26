@@ -141,7 +141,7 @@ node -e "const sdk = require('@nirikshaai/sdk'); console.log('ok')"
 ## 3. Maven Central — Java SDK
 
 ### What it is
-[Maven Central](https://central.sonatype.com) is the standard Java package registry. Users add `ai.niriksha:niriksha-sdk-java` to their `pom.xml` or `build.gradle`.
+[Maven Central](https://central.sonatype.com) is the standard Java package registry. Users add `io.github.san-data-systems:niriksha-sdk-java` to their `pom.xml` or `build.gradle`.
 
 ### 3.1 Create a Sonatype Central Account
 
@@ -152,14 +152,14 @@ node -e "const sdk = require('@nirikshaai/sdk'); console.log('ok')"
 3. Verify your email
 4. Enable **Two-Factor Authentication** in account settings
 
-### 3.2 Verify the `ai.niriksha` Namespace
+### 3.2 Verify the `io.github.san-data-systems` Namespace
 
-You must prove you own the `niriksha.ai` domain (which gives you the `ai.niriksha` groupId by Java's reversed-domain convention).
+Verification uses your GitHub org `san-data-systems` — no DNS record needed. This gives you the `io.github.san-data-systems` groupId..
 
 1. Log in at [central.sonatype.com](https://central.sonatype.com)
 2. Go to **Publishing → Namespaces** → [central.sonatype.com/publishing/namespaces](https://central.sonatype.com/publishing/namespaces)
 3. Click **Add Namespace**
-4. Enter: `ai.niriksha`
+4. Enter: `io.github.san-data-systems`
 5. Sonatype will show a **verification key** (a random string)
 6. Add a DNS TXT record on `niriksha.ai`:
    ```
@@ -171,7 +171,7 @@ You must prove you own the `niriksha.ai` domain (which gives you the `ai.niriksh
 7. Click **Verify Namespace** — DNS propagation takes 5–30 minutes
 8. Status changes to **Verified** ✅
 
-> **Alternative:** If you control the GitHub org `san-data-systems`, you can verify via GitHub instead by setting `io.github.san-data-systems` as the namespace. However, using `ai.niriksha` is preferred for brand consistency.
+> **Alternative:** If you control the GitHub org `san-data-systems`, you can verify via GitHub instead by setting `io.github.san-data-systems` as the namespace. However, using `io.github.san-data-systems` (GitHub org verification — no DNS needed).
 
 ### 3.3 Generate a Deployment Token
 
@@ -231,13 +231,13 @@ After merging and tagging `v0.1.0`:
 ```xml
 <!-- Wait ~15 minutes for Maven Central sync, then test: -->
 <dependency>
-  <groupId>ai.niriksha</groupId>
+  <groupId>io.github.san-data-systems</groupId>
   <artifactId>niriksha-sdk-java</artifactId>
   <version>0.1.0</version>
 </dependency>
 ```
 
-Or search: [central.sonatype.com/search?q=ai.niriksha](https://central.sonatype.com/search?q=ai.niriksha)
+Or search: [central.sonatype.com/search?q=io.github.san-data-systems](https://central.sonatype.com/search?q=io.github.san-data-systems)
 
 ---
 

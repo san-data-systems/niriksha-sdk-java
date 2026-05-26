@@ -72,7 +72,7 @@ jobs:
             Add to your `pom.xml`:
             ```xml
             <dependency>
-              <groupId>ai.niriksha</groupId>
+              <groupId>io.github.san-data-systems</groupId>
               <artifactId>niriksha-sdk-java</artifactId>
               <version>${{ steps.snapver.outputs.snapshot }}</version>
             </dependency>
