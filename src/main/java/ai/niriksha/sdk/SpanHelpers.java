@@ -2,6 +2,7 @@ package ai.niriksha.sdk;
 
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.trace.Span;
 
 /**
@@ -89,7 +90,7 @@ public final class SpanHelpers {
             throw new NullPointerException("SpanHelpers.recordRagChunk: chunk must not be null");
         }
 
-        Attributes.Builder attrs = Attributes.builder()
+        AttributesBuilder attrs = Attributes.builder()
                 .put(KEY_RAG_CHUNK_ID, chunk.getChunkId())
                 .put(KEY_RAG_SOURCE,   chunk.getSource())
                 .put(KEY_RAG_SCORE,    chunk.getScore());
@@ -121,7 +122,7 @@ public final class SpanHelpers {
             throw new NullPointerException("SpanHelpers.recordToolCall: call must not be null");
         }
 
-        Attributes.Builder attrs = Attributes.builder()
+        AttributesBuilder attrs = Attributes.builder()
                 .put(KEY_TOOL_NAME,    call.getToolName())
                 .put(KEY_TOOL_CALL_ID, call.getCallId());
 
