@@ -11,6 +11,7 @@ import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
@@ -411,8 +412,8 @@ public final class NirikshaAI {
                     Resource.builder()
                             .put(ResourceAttributes.SERVICE_NAME, serviceName)
                             .put(ResourceAttributes.DEPLOYMENT_ENVIRONMENT, environment)
-                            .put(io.opentelemetry.api.common.AttributeKey.stringKey("telemetry.sdk.version"), SdkVersion.VERSION)
-                            .put(io.opentelemetry.api.common.AttributeKey.stringKey("telemetry.sdk.language"), SdkVersion.LANGUAGE)
+                            .put(AttributeKey.stringKey("telemetry.sdk.version"), SdkVersion.VERSION)
+                            .put(AttributeKey.stringKey("telemetry.sdk.language"), SdkVersion.LANGUAGE)
                             .build());
 
             // -- Trace exporter --
