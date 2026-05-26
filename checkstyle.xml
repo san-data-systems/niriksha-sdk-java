@@ -10,11 +10,17 @@
   <property name="severity" value="warning"/>
   <property name="fileExtensions" value="java"/>
 
-  <!-- File-level checks -->
+  <!-- File-level checks (Checker scope, not TreeWalker) -->
   <module name="FileTabCharacter">
     <property name="eachLine" value="true"/>
   </module>
   <module name="NewlineAtEndOfFile"/>
+
+  <!-- Line length: 120 chars — must be at Checker level, not TreeWalker -->
+  <module name="LineLength">
+    <property name="max" value="120"/>
+    <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+  </module>
 
   <module name="TreeWalker">
 
@@ -79,12 +85,6 @@
 
     <!-- Annotations -->
     <module name="MissingOverride"/>
-
-    <!-- Line length: 120 chars (generous for an SDK) -->
-    <module name="LineLength">
-      <property name="max" value="120"/>
-      <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
-    </module>
 
   </module>
 
