@@ -29,22 +29,32 @@ public final class RagChunk {
     }
 
     /** Unique identifier for the retrieved chunk. */
-    public String getChunkId() { return chunkId; }
+    public String getChunkId() {
+        return chunkId;
+    }
 
     /** Origin of the chunk (e.g. a document URI, table name, or file path). */
-    public String getSource() { return source; }
+    public String getSource() {
+        return source;
+    }
 
     /** Retrieval relevance score (higher is more relevant). */
-    public double getScore() { return score; }
+    public double getScore() {
+        return score;
+    }
 
     /**
      * Raw text content of the chunk, or {@code null} if not captured.
      * Avoid recording content that may contain PII; use {@link PiiRedactor} first.
      */
-    public String getContent() { return content; }
+    public String getContent() {
+        return content;
+    }
 
     /** Returns a new {@link Builder}. */
-    public static Builder builder() { return new Builder(); }
+    public static Builder builder() {
+        return new Builder();
+    }
 
     /** Fluent builder for {@link RagChunk}. */
     public static final class Builder {
@@ -86,10 +96,12 @@ public final class RagChunk {
          * @throws IllegalStateException if {@code chunkId} or {@code source} is blank or null
          */
         public RagChunk build() {
-            if (chunkId == null || chunkId.isBlank())
+            if (chunkId == null || chunkId.isBlank()) {
                 throw new IllegalStateException("RagChunk: chunkId is required");
-            if (source == null || source.isBlank())
+            }
+            if (source == null || source.isBlank()) {
                 throw new IllegalStateException("RagChunk: source is required");
+            }
             return new RagChunk(this);
         }
     }

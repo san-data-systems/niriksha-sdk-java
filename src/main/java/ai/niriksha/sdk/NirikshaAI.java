@@ -109,14 +109,14 @@ public final class NirikshaAI {
         var otel = io.opentelemetry.api.GlobalOpenTelemetry.get();
         if (otel instanceof io.opentelemetry.sdk.OpenTelemetrySdk sdk) {
             sdk.getSdkTracerProvider()
-               .forceFlush()
-               .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    .forceFlush()
+                    .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
             sdk.getSdkMeterProvider()
-               .forceFlush()
-               .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    .forceFlush()
+                    .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
             sdk.getSdkLoggerProvider()
-               .forceFlush()
-               .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    .forceFlush()
+                    .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
         }
     }
 
@@ -196,15 +196,19 @@ public final class NirikshaAI {
 
     private static EvalClient evalClient() {
         EvalClient c = _evalClient;
-        if (c == null) throw new IllegalStateException(
-                "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
+        if (c == null) {
+            throw new IllegalStateException(
+                    "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
+        }
         return c;
     }
 
     private static PromptClient promptClient() {
         PromptClient c = _promptClient;
-        if (c == null) throw new IllegalStateException(
-                "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
+        if (c == null) {
+            throw new IllegalStateException(
+                    "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
+        }
         return c;
     }
 
@@ -527,8 +531,12 @@ public final class NirikshaAI {
         }
 
         private String stripScheme(String addr) {
-            if (addr.startsWith("https://")) return addr.substring(8);
-            if (addr.startsWith("http://"))  return addr.substring(7);
+            if (addr.startsWith("https://")) {
+                return addr.substring(8);
+            }
+            if (addr.startsWith("http://")) {
+                return addr.substring(7);
+            }
             return addr;
         }
 
