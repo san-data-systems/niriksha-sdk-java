@@ -2,12 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [main, "enhance/**", "fix/**"]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
-  build:
+  build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
     steps:
@@ -19,8 +19,8 @@ jobs:
           cache: maven
       - name: Build, test, checkstyle, SpotBugs, JaCoCo
         run: mvn verify --batch-mode --no-transfer-progress
-      - name: Upload JaCoCo coverage report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: jacoco-report
           path: target/site/jacoco/
@@ -36,30 +36,28 @@ jobs:
           distribution: temurin
           cache: maven
       - name: Run OWASP Dependency Check
-        run: mvn org.owasp:dependency-check-maven:check --batch-mode --no-transfer-progress
-        continue-on-error: true
-      - name: Upload OWASP report
-        uses: actions/upload-artifact@v4
+        run: |
+          mvn org.owasp:dependency-check-maven:check \
+            --batch-mode --no-transfer-progress \
+            -DfailBuildOnCVSS=7 \
+            -DsuppressionFile=owasp-suppressions.xml \
+            -DnvdApiKey=${{ secrets.NVD_API_KEY }}
+        continue-on-error: false
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: owasp-report
           path: target/dependency-check-report.html
-        if: always()
 
-  codeql:
-    name: CodeQL Analysis
+  branch-gate:
+    name: Branch Gate (develop → main only)
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          java-version: "17"
-          distribution: temurin
-      - uses: github/codeql-action/init@v3
-        with:
-          languages: java
-      - uses: github/codeql-action/autobuild@v3
-      - uses: github/codeql-action/analyze@v3
+      - name: Enforce develop → main only
+        run: |
+          if [[ "${{ github.head_ref }}" != "develop" ]]; then
+            echo "ERROR: Only the 'develop' branch may be merged into 'main'."
+            echo "Source branch: ${{ github.head_ref }}"
+            exit 1
+          fi

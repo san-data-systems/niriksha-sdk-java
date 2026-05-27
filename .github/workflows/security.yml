@@ -2,10 +2,11 @@ name: Security Scan
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
   schedule:
     - cron: "0 6 * * 1"
-  workflow_dispatch:
 
 jobs:
   codeql:
@@ -24,10 +25,10 @@ jobs:
       - uses: github/codeql-action/init@v3
         with:
           languages: java
-      - uses: github/codeql-action/autobuild@v3
+          build-mode: none
       - uses: github/codeql-action/analyze@v3
 
-  dependency-check:
+  owasp:
     name: OWASP Dependency Check
     runs-on: ubuntu-latest
     steps:
@@ -37,5 +38,10 @@ jobs:
           java-version: "17"
           distribution: temurin
           cache: maven
-      - run: mvn org.owasp:dependency-check-maven:check --batch-mode
-        continue-on-error: true
+      - name: OWASP check (fail on CVSS ≥ 7)
+        run: |
+          mvn org.owasp:dependency-check-maven:check \
+            --batch-mode --no-transfer-progress \
+            -DfailBuildOnCVSS=7 \
+            -DsuppressionFile=owasp-suppressions.xml \
+            -DnvdApiKey=${{ secrets.NVD_API_KEY }}
