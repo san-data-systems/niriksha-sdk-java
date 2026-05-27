@@ -1,7 +1,8 @@
 # NirikshaAI Java SDK
 
-[![CI](https://github.com/san-data-systems/niriksha-sdk-java/actions/workflows/ci.yml/badge.svg)](https://github.com/san-data-systems/niriksha-sdk-java/actions/workflows/ci.yml)
+[![CI](https://github.com/san-data-systems/niriksha-sdk-java/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/san-data-systems/niriksha-sdk-java/actions/workflows/ci.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.san-data-systems/niriksha-sdk-java.svg)](https://central.sonatype.com/artifact/io.github.san-data-systems/niriksha-sdk-java)
+[![Java 17+](https://img.shields.io/badge/java-17%2B-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive.html)
 [![Javadoc](https://javadoc.io/badge2/io.github.san-data-systems/niriksha-sdk-java/javadoc.svg)](https://javadoc.io/doc/io.github.san-data-systems/niriksha-sdk-java)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
@@ -11,6 +12,8 @@ for logs, metrics, traces, and AI insights.
 The SDK wraps the [OpenTelemetry Java SDK](https://opentelemetry.io/docs/languages/java/) and
 configures it to export traces, metrics, and logs to your NirikshaAI instance via OTLP/gRPC
 with a single fluent builder call.
+
+**Requires Java 17+** and **Maven 3.9+** (or Gradle 6.0+).
 
 ---
 
@@ -22,18 +25,33 @@ with a single fluent builder call.
 <dependency>
   <groupId>io.github.san-data-systems</groupId>
   <artifactId>niriksha-sdk-java</artifactId>
-  <version>0.1.0</version>
+  <version>0.0.1</version>
 </dependency>
 ```
 
-> **Logging:** This SDK uses SLF4J for logging. Add your preferred SLF4J binding to your project (e.g., Logback, Log4j2). For quick local testing, add `slf4j-simple`.
+### Gradle
 
-> Until the artifact is published to Maven Central, install it locally:
-> ```bash
-> git clone https://github.com/san-data-systems/niriksha-sdk-java.git
-> cd niriksha-sdk-java
-> mvn install -DskipTests
+```groovy
+implementation 'io.github.san-data-systems:niriksha-sdk-java:0.0.1'
+```
+
+> **Logging:** This SDK uses SLF4J for logging. Add your preferred SLF4J binding to your project (e.g., Logback, Log4j2). For quick local testing, add `slf4j-simple`:
+> ```xml
+> <dependency>
+>   <groupId>org.slf4j</groupId>
+>   <artifactId>slf4j-simple</artifactId>
+>   <version>2.0.13</version>
+> </dependency>
 > ```
+
+> **Spring Boot:** The SDK includes optional Spring Boot autoconfiguration. Add to your `pom.xml` as optional (already declared):
+> ```xml
+> <dependency>
+>   <groupId>org.springframework.boot</groupId>
+>   <artifactId>spring-boot-starter-web</artifactId>
+> </dependency>
+> ```
+> The `NirikshaAutoConfiguration` class is auto-discovered if Spring Boot is present.
 
 ---
 
@@ -188,6 +206,25 @@ try (Scope ignored = span.makeCurrent()) {
 |---------|-------------|
 | [`examples/spring-boot/`](examples/spring-boot/) | Spring Boot 3 application — `@Configuration` bean + `OrderController` with custom spans |
 | [`examples/plain-java/`](examples/plain-java/) | No-framework HTTP server using `com.sun.net.httpserver` |
+
+---
+
+## Contributing
+
+For guidelines on branching, commits, and releases, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+### Release Process
+
+This SDK follows **semantic versioning** with automatic version bumping:
+
+- **`develop` branch** — feature work merges here → triggers dev build (GitHub pre-release, no Maven Central publish)
+- **`main` branch** — only `develop` can merge → triggers production release with auto semver bump
+
+See [RELEASE.md](RELEASE.md) for the full release process, and [REGISTRY_SETUP.md](REGISTRY_SETUP.md) for Maven Central credentials setup.
+
+### Security
+
+Report security vulnerabilities via [SECURITY.md](SECURITY.md), not via public issues.
 
 ---
 

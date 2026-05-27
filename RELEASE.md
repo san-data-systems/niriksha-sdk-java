@@ -1,290 +1,259 @@
 # Release Guide — niriksha-sdk-java
 
-> Product: [niriksha.ai](https://niriksha.ai) · Company: [sandatasystem.ai](https://sandatasystem.ai)  
-> Maintainer: vbhadauriya@redcloudcomputing.com
+> Product: [niriksha.ai](https://niriksha.ai) · Company: [San Data Systems](https://sandatasystem.ai)  
+> Maintainer: vbhadauriya@sandatasystem.com
 
 ---
 
-## Versioning Scheme
+## Overview
+
+This SDK uses a **two-branch model** with **automatic semantic versioning** and **split release channels**:
+
+- **`develop` branch** → Feature integration, auto dev builds
+- **`main` branch** → Production releases, Maven Central publish
+
+### Release Channels
+
+| Channel | Branch | Trigger | Artifact | Maven Central |
+|---------|--------|---------|----------|--------------|
+| **Dev Build** | `develop` | Any merge | JAR + sources | No (GitHub pre-release) |
+| **Production** | `main` | Only via `develop` PR | JAR + sources + javadoc | Yes (semver auto-bumped) |
+
+---
+
+## Versioning
 
 This SDK follows [Semantic Versioning 2.0.0](https://semver.org):
 
 ```
 MAJOR . MINOR . PATCH
-│       │       └── Bug fixes, security patches (backwards compatible)
+│       │       └── Bug fixes, patches (backwards compatible)
 │       └────────── New features (backwards compatible)
 └────────────────── Breaking API changes
 ```
 
-### Version Lifecycle
+### Version Scheme
 
-| Version Pattern | Meaning | Repository |
-|----------------|---------|-----------|
-| `0.1.0-SNAPSHOT` | Auto dev build (every merge to `main`) | Maven Central Snapshots |
-| `0.1.1-alpha.1` | Alpha — early feature preview | Maven Central (pre-release) |
-| `0.1.1-beta.1` | Beta — feature complete, needs testing | Maven Central (pre-release) |
-| `0.1.1-rc.1` | Release candidate — final testing | Maven Central (pre-release) |
-| `0.1.1` | Stable release | Maven Central (release) |
-| `1.0.0` | First stable API contract | Maven Central (release) |
+| Pattern | Example | Use case |
+|---------|---------|----------|
+| Stable release | `0.1.0` | Production, Maven Central |
+| Pre-release | `0.1.0-alpha.1`, `0.1.0-rc.1` | Early testing, Maven Central |
+| Dev build | `0.0.1-dev.a1b2c3d` | Development only, GitHub pre-release |
 
-> **Why not v0.0.0?** We start at `0.1.0`. `0.0.0` is a placeholder meaning "not yet versioned". `0.x.y` means the public API may still evolve; `1.0.0` signals a stable, committed public API.
+### Conventional Commits (Auto-versioning)
 
-### Add to your project
+The `release.yml` workflow uses [mathieudutour/github-tag-action](https://github.com/mathieudutour/github-tag-action) to automatically bump versions based on commit messages:
 
-**Stable release:**
-```xml
-<dependency>
-  <groupId>io.github.san-data-systems</groupId>
-  <artifactId>niriksha-sdk-java</artifactId>
-  <version>0.1.0</version>
-</dependency>
-```
-
-**SNAPSHOT (dev build):**
-```xml
-<repositories>
-  <repository>
-    <id>central-snapshots</id>
-    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-    <snapshots><enabled>true</enabled></snapshots>
-  </repository>
-</repositories>
-
-<dependency>
-  <groupId>io.github.san-data-systems</groupId>
-  <artifactId>niriksha-sdk-java</artifactId>
-  <version>0.1.1-SNAPSHOT</version>
-</dependency>
-```
-
-**Gradle (stable):**
-```kotlin
-implementation("io.github.san-data-systems:niriksha-sdk-java:0.1.0")
-```
-
-**Gradle (SNAPSHOT):**
-```kotlin
-repositories {
-    maven {
-        url = uri("https://central.sonatype.com/repository/maven-snapshots/")
-        mavenContent { snapshotsOnly() }
-    }
-}
-implementation("io.github.san-data-systems:niriksha-sdk-java:0.1.1-SNAPSHOT")
-```
+| Commit type | Example | Version bump |
+|------------|---------|--------------|
+| `feat:` | `feat: add sampler configuration` | `0.1.0` → `0.2.0` (minor) |
+| `fix:` | `fix: null pointer in logger` | `0.1.0` → `0.1.1` (patch) |
+| `chore:` | `chore: update OTel to 1.39` | `0.1.0` → `0.1.1` (patch) |
+| `BREAKING CHANGE:` in footer | `feat: change API\n\nBREAKING CHANGE: ...` | `0.1.0` → `1.0.0` (major) |
 
 ---
 
-## Branching Strategy
+## Dev Builds (Automatic)
+
+### How it works
+
+Every merge to `develop` triggers `dev-release.yml`:
+
+1. Extracts base version from `pom.xml` (e.g., `0.0.1`)
+2. Computes dev version: `0.0.1-dev.{7-char SHA}` (e.g., `0.0.1-dev.a1b2c3d`)
+3. Runs `mvn verify` with new dev version
+4. Creates GitHub **pre-release** tagged `v0.0.1-dev.a1b2c3d`
+5. Attaches JAR + sources to release
+
+### Using dev builds
+
+Dev builds are published to GitHub Releases (pre-releases) only. You can:
+
+**Option 1: Use GitHub releases page**
+- Go to [releases](https://github.com/san-data-systems/niriksha-sdk-java/releases)
+- Download the JAR from the pre-release assets
+- Add to your local repository or classpath
+
+**Option 2: Build from source (alternative)**
+- Clone and checkout the commit SHA
+- Run `mvn install -DskipTests`
+
+### Important
+
+- Dev builds are **NOT published to Maven Central** (new portal rejects SNAPSHOT versions)
+- Dev builds are **pre-releases** — marked as unstable
+- Use only for **testing and development**, never for production
+- Dev builds are **overwritten** — don't rely on them being archived
+
+---
+
+## Production Releases (Automatic)
+
+### How it works
+
+When you merge `develop` → `main`:
+
+1. `ci.yml` branch gate enforces: **only `develop` can merge to `main`**
+2. `release.yml` workflow triggers:
+   - Fetches all commits since last tag
+   - Analyzes commit messages (conventional commits)
+   - Computes new semver (major/minor/patch)
+   - Creates annotated Git tag (e.g., `v0.1.0`)
+   - Updates `pom.xml` with new version
+   - Commits version bump with `[skip ci]` (skips re-triggering CI)
+   - Runs `mvn deploy -P release` with GPG signing
+   - Publishes to Maven Central
+   - Creates GitHub Release
+
+### Example flow
 
 ```
-main                  ← Protected. Every merge auto-deploys a SNAPSHOT.
+develop (commit: "feat: add new OTLP exporter option")
 │
-├── feature/xxx       ← New features. PR → main.
-├── fix/xxx           ← Bug fixes. PR → main.
-├── hotfix/xxx        ← Urgent production patches. PR → main.
-├── enhance/xxx       ← Improvements (docs, CI, deps). PR → main.
-└── release/x.y.z     ← Release preparation. PR → main, then tag.
+├─── mvn verify passes
+│
+├─── PR created: develop → main
+│
+├─── Branch gate passes (develop is allowed)
+│
+├─── Merge to main
+│
+└─── release.yml triggers:
+     1. Analyze commits → "feat:" → bump minor
+     2. Tag: v0.1.1
+     3. Update pom.xml version
+     4. Commit & push
+     5. Sign & deploy to Maven Central
+     6. Create GitHub Release
 ```
 
-### Branch rules (GitHub → Settings → Branches)
+### Maven Central
 
-| Branch | Protection |
-|--------|-----------|
-| `main` | Require PR, require CI to pass, no force-push |
+After deployment:
+- Artifacts appear in [Maven Central](https://central.sonatype.com) within ~15 minutes
+- Available in all build tools:
+  ```xml
+  <dependency>
+    <groupId>io.github.san-data-systems</groupId>
+    <artifactId>niriksha-sdk-java</artifactId>
+    <version>0.1.1</version>
+  </dependency>
+  ```
 
 ---
 
-## Release Types
+## Pre-releases (Manual)
 
-### 1. Patch Release (0.1.0 → 0.1.1)
-**When:** Bug fix, security patch. No new public API.
-
-```bash
-# 1. Branch from main
-git checkout main && git pull
-git checkout -b release/0.1.1
-
-# 2. Bump version in pom.xml
-mvn versions:set -DnewVersion=0.1.1 --batch-mode
-mvn versions:commit --batch-mode
-
-# 3. Update CHANGELOG.md
-#    Move [Unreleased] entries to [0.1.1] with today's date
-
-# 4. Verify build passes
-mvn verify --batch-mode --no-transfer-progress
-
-# 5. Commit and PR
-git add pom.xml CHANGELOG.md
-git commit -m "chore: release 0.1.1"
-git push -u origin release/0.1.1
-gh pr create --base main --title "chore: release 0.1.1"
-
-# 6. After PR merged, tag
-git checkout main && git pull
-git tag -a v0.1.1 -m "Release v0.1.1"
-git push origin v0.1.1
-# → release.yml deploys to Maven Central automatically
-```
-
-### 2. Minor Release (0.1.0 → 0.2.0)
-**When:** New backwards-compatible features.
+For alpha/beta/RC versions, create tags manually:
 
 ```bash
-mvn versions:set -DnewVersion=0.2.0 --batch-mode
-mvn versions:commit --batch-mode
-# Then PR + tag v0.2.0
+# Create a local tag
+git tag -a v0.1.0-beta.1 -m "Beta 1"
+
+# Push to GitHub
+git push origin v0.1.0-beta.1
+
+# release.yml detects the v* tag and auto-deploys
 ```
 
-### 3. Major Release (0.x.y → 1.0.0)
-**When:** Breaking API changes.
-
-```bash
-mvn versions:set -DnewVersion=1.0.0 --batch-mode
-mvn versions:commit --batch-mode
-# Then PR + tag v1.0.0
-# Update package path if needed: ai.niriksha.sdk → ai.niriksha.sdk.v2
-```
-
-### 4. Pre-release (alpha / beta / RC)
-
-```bash
-# Alpha
-mvn versions:set -DnewVersion=0.2.0-alpha.1 --batch-mode && mvn versions:commit --batch-mode
-git tag -a v0.2.0-alpha.1 -m "Alpha 1 for 0.2.0"
-git push origin v0.2.0-alpha.1
-
-# Beta
-mvn versions:set -DnewVersion=0.2.0-beta.1 --batch-mode && mvn versions:commit --batch-mode
-git tag -a v0.2.0-beta.1 -m "Beta 1 for 0.2.0"
-git push origin v0.2.0-beta.1
-
-# Release Candidate
-mvn versions:set -DnewVersion=0.2.0-rc.1 --batch-mode && mvn versions:commit --batch-mode
-git tag -a v0.2.0-rc.1 -m "RC 1 for 0.2.0"
-git push origin v0.2.0-rc.1
-```
-
-All pre-release tags trigger `release.yml`, which deploys to Maven Central.
-
-### 5. Dev Build / SNAPSHOT (automatic)
-**When:** Every merge to `main` — no manual action required.
-
-The `dev-release.yml` workflow automatically:
-1. Sets version to `{current}-SNAPSHOT` (e.g. `0.1.0-SNAPSHOT`)
-2. Deploys to Maven Central Snapshots repository
-3. Creates a GitHub pre-release
+The tag must match `v*` pattern for `release.yml` to trigger.
 
 ---
 
-## Required Secrets & Setup (One-time)
+## Setup Requirements (One-time)
 
-> **Important:** All credentials below must be registered and generated under the **niriksha.ai product account** (`io.github.san-data-systems` namespace on Sonatype). Do not use a personal developer account. This keeps niriksha publish credentials separate from other San Data Systems products.
+### 1. Branch protection
 
-### Sonatype Central — Maven Central Publishing
+Protect `main` branch:
+1. Go to GitHub repo → Settings → Branches
+2. Add rule for `main`:
+   - Require PR review (optional)
+   - Require status checks to pass: `build-and-test`, `owasp`, `branch-gate`
+   - Dismiss stale reviews
+   - No force push
 
-| Step | Action | URL |
-|------|--------|-----|
-| 1 | Sign in with GitHub (use `san-data-systems` org account) | [central.sonatype.com/sign-up](https://central.sonatype.com/sign-up) |
-| 2 | Verify `io.github.san-data-systems` namespace via GitHub org — no DNS needed | [central.sonatype.com/publishing/namespaces](https://central.sonatype.com/publishing/namespaces) |
-| 3 | Generate a deployment token | [central.sonatype.com/account](https://central.sonatype.com/account) → Profile → Generate User Token |
-| 4 | Add `OSSRH_USERNAME` + `OSSRH_PASSWORD` secrets | [github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions) |
+### 2. GitHub Secrets
 
-### GPG Signing Key — niriksha.ai product key
+Add to [Settings → Secrets → Actions](https://github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions):
 
-| Step | Action | Command |
-|------|--------|---------|
-| 1 | Generate a GPG key for niriksha.ai (use `releases@niriksha.ai` as the email) | `gpg --gen-key` |
-| 2 | List keys to get your `KEY_ID` | `gpg --list-secret-keys --keyid-format LONG` |
-| 3 | Upload public key to keyserver | `gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEY_ID` |
-| 4 | Export private key (armored) | `gpg --armor --export-secret-keys YOUR_KEY_ID` |
-| 5 | Add `GPG_PRIVATE_KEY` secret (paste full `--BEGIN PGP...` output) | [github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions) |
-| 6 | Add `GPG_PASSPHRASE` secret | Same page |
+| Secret | Value | Source |
+|--------|-------|--------|
+| `OSSRH_USERNAME` | Sonatype token username | See [REGISTRY_SETUP.md](REGISTRY_SETUP.md#33-generate-a-deployment-token) |
+| `OSSRH_PASSWORD` | Sonatype token password | See [REGISTRY_SETUP.md](REGISTRY_SETUP.md#33-generate-a-deployment-token) |
+| `GPG_PRIVATE_KEY` | Armored GPG private key | See [REGISTRY_SETUP.md](REGISTRY_SETUP.md#34-generate-a-gpg-signing-key) |
+| `GPG_PASSPHRASE` | GPG key passphrase | See [REGISTRY_SETUP.md](REGISTRY_SETUP.md#34-generate-a-gpg-signing-key) |
 
-> Use `releases@niriksha.ai` (not a personal email) as the GPG key identity. This ties the signing key to the product, not an individual.
+`GITHUB_TOKEN` is auto-provided by GitHub Actions.
 
-| Step | Action | URL |
-|------|--------|-----|
+### 3. Release environment (optional)
 
-### Secrets Summary
-
-| Secret | Value source |
-|--------|-------------|
-| `OSSRH_USERNAME` | Sonatype Central token username (niriksha.ai account) |
-| `OSSRH_PASSWORD` | Sonatype Central token password (niriksha.ai account) |
-| `GPG_PRIVATE_KEY` | Armored private key for `releases@niriksha.ai` GPG key |
-| `GPG_PASSPHRASE` | Passphrase for the GPG key above |
-| `GITHUB_TOKEN` | Auto-provided by GitHub Actions |
-
-### SLF4J Binding Note
-This SDK declares `slf4j-api` as a compile dependency. Consumers must add their preferred binding:
-
-```xml
-<!-- Logback (recommended) -->
-<dependency>
-  <groupId>ch.qos.logback</groupId>
-  <artifactId>logback-classic</artifactId>
-  <version>1.5.6</version>
-</dependency>
-
-<!-- or Log4j2 -->
-<dependency>
-  <groupId>org.apache.logging.log4j</groupId>
-  <artifactId>log4j-slf4j2-impl</artifactId>
-  <version>2.23.1</version>
-</dependency>
-```
+Create a GitHub environment for production releases:
+1. Go to Settings → Environments
+2. Create environment: `release`
+3. Optionally add required reviewers (e.g., `@V-Bhadauriya`)
+4. This gates `release.yml` deployment step
 
 ---
 
-## Release Checklist
+## Troubleshooting
 
-- [ ] All CI checks green on `main`
-- [ ] `mvn verify` passes (tests + Checkstyle + SpotBugs + JaCoCo ≥60%)
-- [ ] CHANGELOG.md updated — `[Unreleased]` moved to `[x.y.z]` with date
-- [ ] Version bumped in `pom.xml` via `mvn versions:set`
-- [ ] PR merged to `main`
-- [ ] Tag pushed: `git tag -a vX.Y.Z -m "Release vX.Y.Z" && git push origin vX.Y.Z`
-- [ ] Maven Central deployment confirmed (check [central.sonatype.com](https://central.sonatype.com))
-- [ ] GitHub Release created (auto by `release.yml`)
+### Dev build doesn't trigger
 
----
+Check `dev-release.yml`:
+- Verify branch is `develop`
+- Verify commit was actually merged (not squashed into wrong branch)
+- Check Actions tab → `Dev Release` workflow run
 
-## Hotfix Process
+### Release doesn't trigger
+
+Check `release.yml`:
+- Verify PR was merged from `develop` to `main` (not force-pushed)
+- Verify branch gate passed
+- Check Actions tab → `Release` workflow run
+- Look for Git tag in [releases](https://github.com/san-data-systems/niriksha-sdk-java/releases)
+
+### Maven Central sync delay
+
+Maven Central syncs every 5–15 minutes. Check:
+1. Is the GitHub Release created? (indicates workflow ran)
+2. Check Maven Central: [search `io.github.san-data-systems`](https://central.sonatype.com/search?q=io.github.san-data-systems)
+3. If missing after 30 minutes, check the `release.yml` run logs for deploy errors
+
+### Version bump unexpected
+
+Review the commit history since last tag:
 
 ```bash
-git checkout main && git pull
-git checkout -b hotfix/fix-description
-
-# Fix + test
-mvn test
-
-# Bump patch version
-mvn versions:set -DnewVersion=0.1.1 --batch-mode
-mvn versions:commit --batch-mode
-
-git add pom.xml
-git commit -m "fix: critical bug description"
-git push -u origin hotfix/fix-description
-gh pr create --base main --title "hotfix: critical bug"
-
-# After merge
-git checkout main && git pull
-git tag -a v0.1.1 -m "Hotfix: critical bug"
-git push origin v0.1.1
+git log --oneline v0.1.0..HEAD
 ```
+
+Each commit's message determines the bump:
+- `feat:` → minor
+- `fix:` / `chore:` → patch
+- `BREAKING CHANGE:` in footer → major
+
+If bump is wrong, the commit message format is likely non-standard.
+
+### GPG signing fails
+
+Check `release.yml` logs under the "Deploy to Maven Central" step:
+
+```
+error: gpg: signing failed
+```
+
+Solutions:
+1. Verify `GPG_PRIVATE_KEY` secret is valid (must include header/footer lines)
+2. Verify `GPG_PASSPHRASE` is correct
+3. Regenerate keys and update secrets (see [REGISTRY_SETUP.md](REGISTRY_SETUP.md#34-generate-a-gpg-signing-key))
 
 ---
 
-## CHANGELOG Management
+## References
 
-Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
-
-```markdown
-## [Unreleased]          ← new changes go here first
-## [0.1.1] - 2025-06-01 ← moved here when releasing
-## [0.1.0] - 2025-05-01
-```
-
-Every PR must include a CHANGELOG entry under `[Unreleased]`.
+- [Semantic Versioning](https://semver.org)
+- [Conventional Commits](https://www.conventionalcommits.org)
+- [mathieudutour/github-tag-action](https://github.com/mathieudutour/github-tag-action#outputs)
+- [Maven Central Publishing](https://central.sonatype.com)
+- [Contributing Guidelines](CONTRIBUTING.md)
+- [Registry Setup (Credentials)](REGISTRY_SETUP.md)
