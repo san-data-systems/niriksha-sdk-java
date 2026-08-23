@@ -1,11 +1,9 @@
 package ai.niriksha.sdk;
 
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,8 +42,13 @@ final class PromptClient {
     }
 
     /**
-     * Fetches a prompt by name, optionally pinning to a version and substituting variables.
+     * Renders a prompt by name, optionally pinning to a version and substituting variables.
      * Results are cached in-memory for {@value #CACHE_TTL_MS} ms.
+     *
+     * <p>This is a {@code POST} to {@code /api/v1/sdk/prompts/render} with a JSON body.
+     * It previously issued {@code GET /api/v1/prompts/{name}?version=&var[k]=v}, which
+     * the server has never served: wrong path, wrong method, and a query-parameter
+     * encoding no handler reads. Every call 404'd.
      */
     PromptResponse getPrompt(String name, GetPromptOptions options) {
         String key = cacheKey(name, options);
@@ -54,36 +57,47 @@ final class PromptClient {
             return cached.response();
         }
 
-        StringBuilder url = new StringBuilder(baseUrl)
-                .append("/api/v1/prompts/")
-                .append(URLEncoder.encode(name, StandardCharsets.UTF_8));
+        Integer version = options != null ? options.getVersion() : null;
+        Map<String, String> variables = options != null ? options.getVariables() : Map.of();
+        String body = post(baseUrl + "/api/v1/sdk/prompts/render",
+                buildRenderRequest(name, version, variables));
 
-        boolean first = true;
-        if (options != null) {
-            if (options.getVersion() != null) {
-                url.append(first ? "?" : "&").append("version=").append(options.getVersion());
-                first = false;
-            }
-            for (Map.Entry<String, String> e : options.getVariables().entrySet()) {
-                url.append(first ? "?" : "&")
-                        .append("var[").append(URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8))
-                        .append("]=").append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8));
-                first = false;
-            }
-        }
-
-        String body = get(url.toString());
-        PromptResponse response = parsePromptResponse(body);
+        PromptResponse response = parseRenderResponse(body, name, version);
         CACHE.put(key, new CacheEntry(response, System.currentTimeMillis() + CACHE_TTL_MS));
         return response;
     }
 
     /**
      * Lists all available prompts in this project.
+     *
+     * <p>The listing carries {@code id}, {@code name}, {@code description} and
+     * {@code created_at} only — not the prompt text. {@link PromptResponse#getText()}
+     * is therefore empty on a listed entry; call {@link #getPrompt} to render one.
      */
     List<PromptResponse> listPrompts() {
-        String body = get(baseUrl + "/api/v1/prompts");
+        String body = get(baseUrl + "/api/v1/sdk/prompts");
         return parsePromptList(body);
+    }
+
+    /** Builds the render request body. */
+    String buildRenderRequest(String name, Integer version, Map<String, String> variables) {
+        StringBuilder sb = new StringBuilder("{\"name\":").append(jsonString(name));
+        if (version != null) {
+            sb.append(",\"version\":").append(version);
+        }
+        if (variables != null && !variables.isEmpty()) {
+            sb.append(",\"variables\":{");
+            boolean first = true;
+            for (Map.Entry<String, String> e : variables.entrySet()) {
+                if (!first) {
+                    sb.append(',');
+                }
+                sb.append(jsonString(e.getKey())).append(':').append(jsonString(e.getValue()));
+                first = false;
+            }
+            sb.append('}');
+        }
+        return sb.append('}').toString();
     }
 
     /**
@@ -97,6 +111,18 @@ final class PromptClient {
     // HTTP helpers
     // -----------------------------------------------------------------------
 
+    private String post(String url, String jsonBody) {
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("X-API-Key", apiKey)
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .timeout(Duration.ofSeconds(15))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                .build();
+        return send(req, "Prompt render");
+    }
+
     private String get(String url) {
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -105,18 +131,27 @@ final class PromptClient {
                 .timeout(Duration.ofSeconds(15))
                 .GET()
                 .build();
+        return send(req, "Prompt request");
+    }
+
+    private String send(HttpRequest req, String what) {
         try {
             HttpResponse<String> resp = HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
                 throw new NirikshaAIException(
-                        "Prompt request failed with HTTP " + resp.statusCode() + ": " + resp.body());
+                        what + " failed with HTTP " + resp.statusCode() + ": " + resp.body());
             }
             return resp.body();
         } catch (NirikshaAIException e) {
             throw e;
+        } catch (InterruptedException e) {
+            // Restoring the flag is required: swallowing it leaves the thread
+            // uninterruptible for whatever runs next on it.
+            Thread.currentThread().interrupt();
+            throw new NirikshaAIException(what + " interrupted", e);
         } catch (Exception e) {
             LOGGER.warn("NirikshaAI: prompt request error", e);
-            throw new NirikshaAIException("Prompt request failed: " + e.getMessage(), e);
+            throw new NirikshaAIException(what + " failed: " + e.getMessage(), e);
         }
     }
 
@@ -124,15 +159,44 @@ final class PromptClient {
     // Minimal JSON parsing (no external dependency)
     // -----------------------------------------------------------------------
 
+    /**
+     * Parses a render response.
+     *
+     * <p>The server returns {@code {"success":true,"data":{"content":"..."}}} — the
+     * rendered text under {@code content}, and nothing else. The previous
+     * implementation looked for {@code "text"}, {@code "version"} and {@code "tags"},
+     * none of which that response carries, so {@link PromptResponse#getText()} came
+     * back empty and the caller sent an empty prompt to the model. An empty prompt is
+     * the worst possible failure here, because nothing errors.
+     *
+     * <p>The requested name and version are carried through from the call, since the
+     * response does not echo them.
+     */
+    PromptResponse parseRenderResponse(String json, String name, Integer version) {
+        String content = extractString(json, "content");
+        if (content.isEmpty()) {
+            // Distinguish "the prompt is genuinely empty" from "the response did not
+            // contain what we expected", which is what the old code silently did.
+            throw new NirikshaAIException(
+                    "Prompt render returned no content for \'" + name + "\'; response: " + json);
+        }
+        return new PromptResponse(name, version != null ? version : 0, content, "",
+                List.of(), "", "");
+    }
+
+    /**
+     * Parses one entry of the prompt listing.
+     *
+     * <p>The listing carries {@code id}, {@code name}, {@code description} and
+     * {@code created_at}. There is no text, version or tag data in it, so those come
+     * back as empty — call {@link #getPrompt} to render a prompt.
+     */
     PromptResponse parsePromptResponse(String json) {
         String name        = extractString(json, "name");
-        String text        = extractString(json, "text");
         String description = extractString(json, "description");
         String createdAt   = extractString(json, "created_at");
-        String updatedAt   = extractString(json, "updated_at");
         int    version     = extractInt(json, "version");
-        List<String> tags  = extractStringArray(json, "tags");
-        return new PromptResponse(name, version, text, description, tags, createdAt, updatedAt);
+        return new PromptResponse(name, version, "", description, List.of(), createdAt, "");
     }
 
     List<PromptResponse> parsePromptList(String json) {
@@ -178,21 +242,6 @@ final class PromptClient {
         return "";
     }
 
-    private List<String> extractStringArray(String json, String key) {
-        Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*\\[([^\\]]*)\\]");
-        Matcher m = p.matcher(json);
-        if (!m.find()) {
-            return List.of();
-        }
-        String inner = m.group(1);
-        List<String> result = new ArrayList<>();
-        Matcher items = Pattern.compile("\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(inner);
-        while (items.find()) {
-            result.add(items.group(1));
-        }
-        return result;
-    }
-
     private int extractInt(String json, String key) {
         Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*(\\d+)");
         Matcher m = p.matcher(json);
@@ -200,6 +249,14 @@ final class PromptClient {
             return Integer.parseInt(m.group(1));
         }
         return 0;
+    }
+
+    /** Minimal JSON string escaping, matching EvalClient's. */
+    private static String jsonString(String s) {
+        if (s == null) {
+            return "null";
+        }
+        return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
     private static String cacheKey(String name, GetPromptOptions opts) {

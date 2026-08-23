@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ToolCall.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">ToolCall.java</span></div><h1>ToolCall.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+/**
+ * Metadata for an LLM tool/function invocation.
+ *
+ * &lt;p&gt;Use {@link #builder()} to construct instances:
+ * &lt;pre&gt;{@code
+ * ToolCall call = ToolCall.builder()
+ *     .toolName(&quot;search_logs&quot;)
+ *     .callId(&quot;call_abc123&quot;)
+ *     .input(&quot;{\&quot;query\&quot;:\&quot;error rate\&quot;,\&quot;window\&quot;:\&quot;5m\&quot;}&quot;)
+ *     .output(&quot;{\&quot;count\&quot;:42}&quot;)
+ *     .build();
+ * SpanHelpers.recordToolCall(span, call);
+ * }&lt;/pre&gt;
+ */
+public final class ToolCall {
+
+    private final String toolName;
+    private final String callId;
+    private final String input;  // JSON string, may be null
+    private final String output; // JSON string, may be null
+
+<span class="fc" id="L24">    private ToolCall(Builder b) {</span>
+<span class="fc" id="L25">        this.toolName = b.toolName;</span>
+<span class="fc" id="L26">        this.callId   = b.callId;</span>
+<span class="fc" id="L27">        this.input    = b.input;</span>
+<span class="fc" id="L28">        this.output   = b.output;</span>
+<span class="fc" id="L29">    }</span>
+
+    /** Name of the tool or function being called. */
+    public String getToolName() {
+<span class="fc" id="L33">        return toolName;</span>
+    }
+
+    /** Unique call identifier assigned by the LLM (e.g. OpenAI's {@code tool_call_id}). */
+    public String getCallId() {
+<span class="fc" id="L38">        return callId;</span>
+    }
+
+    /**
+     * JSON-serialised input arguments, or {@code null} if not captured.
+     * Avoid recording arguments that may contain PII; use {@link PiiRedactor} first.
+     */
+    public String getInput() {
+<span class="fc" id="L46">        return input;</span>
+    }
+
+    /**
+     * JSON-serialised output returned by the tool, or {@code null} if not captured.
+     * Avoid recording output that may contain PII; use {@link PiiRedactor} first.
+     */
+    public String getOutput() {
+<span class="fc" id="L54">        return output;</span>
+    }
+
+    /** Returns a new {@link Builder}. */
+    public static Builder builder() {
+<span class="fc" id="L59">        return new Builder();</span>
+    }
+
+    /** Fluent builder for {@link ToolCall}. */
+    public static final class Builder {
+
+        private String toolName;
+        private String callId;
+        private String input;
+        private String output;
+
+        private Builder() {}
+
+        /** Sets the tool name. Required. */
+        public Builder toolName(String toolName) {
+<span class="fc" id="L74">            this.toolName = toolName;</span>
+<span class="fc" id="L75">            return this;</span>
+        }
+
+        /** Sets the unique call identifier. Required. */
+        public Builder callId(String callId) {
+<span class="fc" id="L80">            this.callId = callId;</span>
+<span class="fc" id="L81">            return this;</span>
+        }
+
+        /** Sets the JSON-serialised input arguments. Optional. */
+        public Builder input(String input) {
+<span class="fc" id="L86">            this.input = input;</span>
+<span class="fc" id="L87">            return this;</span>
+        }
+
+        /** Sets the JSON-serialised output returned by the tool. Optional. */
+        public Builder output(String output) {
+<span class="fc" id="L92">            this.output = output;</span>
+<span class="fc" id="L93">            return this;</span>
+        }
+
+        /**
+         * Builds the {@link ToolCall}.
+         *
+         * @throws IllegalStateException if {@code toolName} or {@code callId} is blank or null
+         */
+        public ToolCall build() {
+<span class="fc bfc" id="L102" title="All 4 branches covered.">            if (toolName == null || toolName.isBlank()) {</span>
+<span class="fc" id="L103">                throw new IllegalStateException(&quot;ToolCall: toolName is required&quot;);</span>
+            }
+<span class="fc bfc" id="L105" title="All 4 branches covered.">            if (callId == null || callId.isBlank()) {</span>
+<span class="fc" id="L106">                throw new IllegalStateException(&quot;ToolCall: callId is required&quot;);</span>
+            }
+<span class="fc" id="L108">            return new ToolCall(this);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

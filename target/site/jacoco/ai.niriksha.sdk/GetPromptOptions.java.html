@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GetPromptOptions.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">GetPromptOptions.java</span></div><h1>GetPromptOptions.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Optional parameters for {@link NirikshaAI#getPrompt(String, GetPromptOptions)}.
+ *
+ * &lt;pre&gt;{@code
+ * GetPromptOptions opts = GetPromptOptions.builder()
+ *     .version(3)
+ *     .variable(&quot;product_name&quot;, &quot;Widget Pro&quot;)
+ *     .variable(&quot;category&quot;, &quot;Electronics&quot;)
+ *     .build();
+ *
+ * PromptResponse prompt = NirikshaAI.getPrompt(&quot;product-description&quot;, opts);
+ * }&lt;/pre&gt;
+ */
+public final class GetPromptOptions {
+
+    private final Integer version;
+    private final Map&lt;String, String&gt; variables;
+
+<span class="fc" id="L25">    private GetPromptOptions(Builder b) {</span>
+<span class="fc" id="L26">        this.version   = b.version;</span>
+<span class="fc" id="L27">        this.variables = Collections.unmodifiableMap(new HashMap&lt;&gt;(b.variables));</span>
+<span class="fc" id="L28">    }</span>
+
+    /** Specific version to fetch, or {@code null} for the latest deployed version. */
+    public Integer getVersion() {
+<span class="fc" id="L32">        return version;</span>
+    }
+
+    /** Variable substitutions applied server-side ({@code {{key}}} → value). */
+    public Map&lt;String, String&gt; getVariables() {
+<span class="fc" id="L37">        return variables;</span>
+    }
+
+    public static Builder builder() {
+<span class="fc" id="L41">        return new Builder();</span>
+    }
+
+    public static final class Builder {
+        private Integer version;
+<span class="fc" id="L46">        private final Map&lt;String, String&gt; variables = new HashMap&lt;&gt;();</span>
+
+<span class="fc" id="L48">        private Builder() {}</span>
+
+        /** Pin to a specific version. Omit to use the latest deployed version. */
+        public Builder version(int version) {
+<span class="fc" id="L52">            this.version = version;</span>
+<span class="fc" id="L53">            return this;</span>
+        }
+
+        /** Add a single template variable substitution. */
+        public Builder variable(String key, String value) {
+<span class="fc" id="L58">            this.variables.put(key, value);</span>
+<span class="fc" id="L59">            return this;</span>
+        }
+
+        /** Set all template variables at once. */
+        public Builder variables(Map&lt;String, String&gt; variables) {
+<span class="fc" id="L64">            this.variables.putAll(variables);</span>
+<span class="fc" id="L65">            return this;</span>
+        }
+
+        public GetPromptOptions build() {
+<span class="fc" id="L69">            return new GetPromptOptions(this);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,75 @@
+{
+  "groups": [
+    {
+      "name": "nirikshaai",
+      "type": "ai.niriksha.sdk.spring.NirikshaAIProperties",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "nirikshaai.api-key",
+      "type": "java.lang.String",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties"
+    },
+    {
+      "name": "nirikshaai.ca-cert-file",
+      "type": "java.lang.String",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties"
+    },
+    {
+      "name": "nirikshaai.enable-logs",
+      "type": "java.lang.Boolean",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties",
+      "defaultValue": true
+    },
+    {
+      "name": "nirikshaai.enable-metrics",
+      "type": "java.lang.Boolean",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties",
+      "defaultValue": true
+    },
+    {
+      "name": "nirikshaai.endpoint",
+      "type": "java.lang.String",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties",
+      "defaultValue": "https:\/\/app.niriksha.ai"
+    },
+    {
+      "name": "nirikshaai.environment",
+      "type": "java.lang.String",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties",
+      "defaultValue": "production"
+    },
+    {
+      "name": "nirikshaai.insecure",
+      "type": "java.lang.Boolean",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties",
+      "defaultValue": false
+    },
+    {
+      "name": "nirikshaai.otlp-endpoint",
+      "type": "java.lang.String",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties"
+    },
+    {
+      "name": "nirikshaai.sample-rate",
+      "type": "java.lang.Double",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties",
+      "defaultValue": 1
+    },
+    {
+      "name": "nirikshaai.service-name",
+      "type": "java.lang.String",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties",
+      "defaultValue": "my-service"
+    },
+    {
+      "name": "nirikshaai.tls-skip-verify",
+      "type": "java.lang.Boolean",
+      "sourceType": "ai.niriksha.sdk.spring.NirikshaAIProperties",
+      "defaultValue": false
+    }
+  ],
+  "hints": []
+}
