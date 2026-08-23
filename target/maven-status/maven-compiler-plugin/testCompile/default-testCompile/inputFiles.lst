@@ -1,6 +1,7 @@
 /Users/sandata/2026/niriksha-sdk-java/src/test/java/ai/niriksha/sdk/BaggageHelperTest.java
 /Users/sandata/2026/niriksha-sdk-java/src/test/java/ai/niriksha/sdk/EvalInputTest.java
 /Users/sandata/2026/niriksha-sdk-java/src/test/java/ai/niriksha/sdk/GetPromptOptionsTest.java
+/Users/sandata/2026/niriksha-sdk-java/src/test/java/ai/niriksha/sdk/GuardClientTest.java
 /Users/sandata/2026/niriksha-sdk-java/src/test/java/ai/niriksha/sdk/NirikshaAITest.java
 /Users/sandata/2026/niriksha-sdk-java/src/test/java/ai/niriksha/sdk/PiiRedactorTest.java
 /Users/sandata/2026/niriksha-sdk-java/src/test/java/ai/niriksha/sdk/PromptClientTest.java

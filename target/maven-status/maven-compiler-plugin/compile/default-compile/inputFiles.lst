@@ -2,6 +2,14 @@
 /Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/EvalClient.java
 /Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/EvalInput.java
 /Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GetPromptOptions.java
+/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardAction.java
+/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardBatchItem.java
+/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardBatchResult.java
+/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardBlockedException.java
+/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardClient.java
+/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardFailMode.java
+/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardFinding.java
+/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardVerdict.java
 /Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/NirikshaAI.java
 /Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/NirikshaAIException.java
 /Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/PiiRedactor.java

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GuardFinding.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">GuardFinding.java</span></div><h1>GuardFinding.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+/** One detection reported by the guard. */
+public final class GuardFinding {
+
+    private final String category;
+    private final String severity;
+    private final String rule;
+    private final double confidence;
+    private final int start;
+    private final int end;
+    private final boolean local;
+
+    GuardFinding(String category, String severity, String rule, double confidence,
+<span class="fc" id="L15">            int start, int end, boolean local) {</span>
+<span class="pc bpc" id="L16" title="1 of 2 branches missed.">        this.category   = category != null ? category : &quot;&quot;;</span>
+<span class="pc bpc" id="L17" title="1 of 2 branches missed.">        this.severity   = severity != null ? severity : &quot;&quot;;</span>
+<span class="pc bpc" id="L18" title="1 of 2 branches missed.">        this.rule       = rule != null ? rule : &quot;&quot;;</span>
+<span class="fc" id="L19">        this.confidence = confidence;</span>
+<span class="fc" id="L20">        this.start      = start;</span>
+<span class="fc" id="L21">        this.end        = end;</span>
+<span class="fc" id="L22">        this.local      = local;</span>
+<span class="fc" id="L23">    }</span>
+
+    /** {@code prompt_injection}, {@code jailbreak}, {@code secret}, {@code pii} or {@code tool_abuse}. */
+    public String getCategory() {
+<span class="nc" id="L27">        return category;</span>
+    }
+
+    /** {@code low}, {@code medium}, {@code high} or {@code critical}. */
+    public String getSeverity() {
+<span class="nc" id="L32">        return severity;</span>
+    }
+
+    /** The name of the rule that matched. */
+    public String getRule() {
+<span class="fc" id="L37">        return rule;</span>
+    }
+
+    /** How much the rule is trusted, 0..1. Weights the risk score. */
+    public double getConfidence() {
+<span class="fc" id="L42">        return confidence;</span>
+    }
+
+    /** Byte offset of the match start, for exact redaction. */
+    public int getStart() {
+<span class="fc" id="L47">        return start;</span>
+    }
+
+    /** Byte offset of the match end, exclusive. */
+    public int getEnd() {
+<span class="fc" id="L52">        return end;</span>
+    }
+
+    /**
+     * Whether this came from the SDK's embedded patterns rather than the server.
+     *
+     * &lt;p&gt;Only set when the guard was unreachable and the fail mode is
+     * {@link GuardFailMode#SECRETS_CLOSED}.
+     */
+    public boolean isLocal() {
+<span class="fc" id="L62">        return local;</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L67">        return &quot;GuardFinding{rule='&quot; + rule + &quot;', severity='&quot; + severity + &quot;'}&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

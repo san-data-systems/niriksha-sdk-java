@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GuardFailMode.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">GuardFailMode.java</span></div><h1>GuardFailMode.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+/**
+ * What the guard does when it cannot reach the server.
+ *
+ * &lt;p&gt;Fail-open is the default because a guard outage must not take down the
+ * caller's application — but it is never silent: every fall-back logs a warning,
+ * sets {@link GuardVerdict#failedOpen()} and increments {@code guard.fail_open}. A
+ * silent fail-open is a security hole wearing a reliability costume, because the
+ * control appears to work right up until the moment it is needed.
+ */
+<span class="fc" id="L12">public enum GuardFailMode {</span>
+
+    /** Allow everything. Default. */
+<span class="fc" id="L15">    OPEN(&quot;open&quot;),</span>
+
+    /**
+     * Block everything.
+     *
+     * &lt;p&gt;Correct for a hard compliance boundary, and a guaranteed outage for
+     * everyone else: it converts a guard outage into an application outage.
+     */
+<span class="fc" id="L23">    CLOSED(&quot;closed&quot;),</span>
+
+    /**
+     * Allow everything except locally-detectable credentials.
+     *
+     * &lt;p&gt;The only fail mode that is both safe and survivable, and the one worth
+     * using in production. Ten prefix-anchored secret formats are embedded in the
+     * SDK, so an outage stops credential exfiltration locally while everything else
+     * still flows.
+     */
+<span class="fc" id="L33">    SECRETS_CLOSED(&quot;secrets_closed&quot;);</span>
+
+    private final String wire;
+
+<span class="fc" id="L37">    GuardFailMode(String wire) {</span>
+<span class="fc" id="L38">        this.wire = wire;</span>
+<span class="fc" id="L39">    }</span>
+
+    /** The value used in logs and metric attributes. */
+    public String wireValue() {
+<span class="fc" id="L43">        return wire;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
