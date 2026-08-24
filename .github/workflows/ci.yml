@@ -28,6 +28,12 @@ jobs:
   owasp:
     name: OWASP Dependency Check
     runs-on: ubuntu-latest
+    # The NVD download, not the analysis, is what takes time here. Without an
+    # NVD_API_KEY secret the API is heavily throttled: a cold, keyless full
+    # download has hit GitHub's 6-hour job limit. The cache below makes every
+    # run after the first incremental (minutes); an NVD API key (free, see
+    # https://nvd.nist.gov/developers/request-an-api-key) fixes the cold case.
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -35,6 +41,16 @@ jobs:
           java-version: "17"
           distribution: temurin
           cache: maven
+      # The NVD database evolves every run, so the key never matches and the
+      # restore-key pulls the newest previous copy; the post step then saves
+      # the updated one under this run's key.
+      - name: Cache NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: nvd-db-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            nvd-db-${{ runner.os }}-
       - name: Run OWASP Dependency Check
         run: |
           mvn org.owasp:dependency-check-maven:check \

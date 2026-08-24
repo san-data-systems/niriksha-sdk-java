@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: ai.niriksha.sdk.GuardClientTest
 -------------------------------------------------------------------------------
-Tests run: 34, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.137 s -- in ai.niriksha.sdk.GuardClientTest
+Tests run: 34, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.132 s -- in ai.niriksha.sdk.GuardClientTest
