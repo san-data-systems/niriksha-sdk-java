@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GuardClient.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">GuardClient.java</span></div><h1>GuardClient.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.LongCounter;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Inline AI security guard — checks text before it reaches the model.
+ *
+ * &lt;p&gt;The rest of this SDK is observability: it records what happened. This is
+ * enforcement. It calls the gateway's synchronous {@code /v1/guard} endpoint, which
+ * returns a verdict in single-digit milliseconds, so a prompt injection can be
+ * refused and a leaked credential stripped before the provider call is made.
+ *
+ * &lt;p&gt;Not part of the public API — use {@link NirikshaAI#guardCheck} and friends.
+ *
+ * &lt;p&gt;Three deliberate differences from how comparable SDKs behave, each because the
+ * obvious choice is worse:
+ *
+ * &lt;ol&gt;
+ *   &lt;li&gt;A redact verdict returns normally. Only a block throws
+ *       {@link GuardBlockedException}. Throwing on both means a customer who asked
+ *       for PII stripping gets their application broken instead of their data
+ *       protected.&lt;/li&gt;
+ *   &lt;li&gt;Fail-open stays the default but stops being silent. Every fall-back logs a
+ *       warning and increments {@code guard.fail_open}.&lt;/li&gt;
+ *   &lt;li&gt;{@link GuardFailMode#SECRETS_CLOSED} embeds the secret patterns here, so
+ *       when the server is unreachable credential exfiltration is still blocked
+ *       locally while everything else fails open.&lt;/li&gt;
+ * &lt;/ol&gt;
+ */
+final class GuardClient {
+
+<span class="fc" id="L48">    private static final Logger LOGGER = LoggerFactory.getLogger(GuardClient.class);</span>
+
+    /**
+     * Requests are bounded because this sits on the caller's critical path. A guard
+     * that hangs is worse than one that is absent: the absent one fails fast.
+     */
+<span class="fc" id="L54">    private static final Duration TIMEOUT = Duration.ofSeconds(3);</span>
+
+    /**
+     * Mirrors the server's cap, so an oversized batch fails here with a clear
+     * message rather than as a 400 from the gateway.
+     */
+    static final int MAX_BATCH = 32;
+
+<span class="fc" id="L62">    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()</span>
+<span class="fc" id="L63">            .connectTimeout(TIMEOUT)</span>
+<span class="fc" id="L64">            .build();</span>
+
+    private final String baseUrl;
+    private final String apiKey;
+    private final GuardFailMode failMode;
+    private final String mode;
+
+    private volatile LongCounter failOpenCounter;
+
+<span class="fc" id="L73">    GuardClient(String baseUrl, String apiKey, GuardFailMode failMode, String mode) {</span>
+<span class="fc" id="L74">        this.baseUrl  = baseUrl.replaceAll(&quot;/$&quot;, &quot;&quot;);</span>
+<span class="fc" id="L75">        this.apiKey   = apiKey;</span>
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">        this.failMode = failMode != null ? failMode : GuardFailMode.OPEN;</span>
+<span class="fc" id="L77">        this.mode     = mode;</span>
+<span class="fc" id="L78">    }</span>
+
+    // ── public surface (package-private; NirikshaAI is the entry point) ──────
+
+    GuardVerdict check(String text, String direction) {
+<span class="pc bpc" id="L83" title="1 of 4 branches missed.">        String dir = direction == null || direction.isBlank() ? &quot;input&quot; : direction;</span>
+<span class="fc" id="L84">        StringBuilder body = new StringBuilder(&quot;{\&quot;text\&quot;:&quot;).append(jsonString(text))</span>
+<span class="fc" id="L85">                .append(&quot;,\&quot;direction\&quot;:&quot;).append(jsonString(dir));</span>
+<span class="fc" id="L86">        appendMode(body);</span>
+<span class="fc" id="L87">        body.append('}');</span>
+
+<span class="fc" id="L89">        GuardVerdict v = evaluate(baseUrl + &quot;/v1/guard&quot;, body.toString(), text);</span>
+<span class="fc" id="L90">        throwIfBlocked(v);</span>
+<span class="fc" id="L91">        return v;</span>
+    }
+
+    GuardVerdict checkTool(String name, String argumentsJson) {
+<span class="fc bfc" id="L95" title="All 2 branches covered.">        String args = argumentsJson != null ? argumentsJson : &quot;&quot;;</span>
+<span class="fc" id="L96">        StringBuilder body = new StringBuilder(&quot;{\&quot;tool\&quot;:{\&quot;name\&quot;:&quot;).append(jsonString(name))</span>
+<span class="fc" id="L97">                .append(&quot;,\&quot;arguments\&quot;:&quot;).append(jsonString(args)).append('}');</span>
+<span class="fc" id="L98">        appendMode(body);</span>
+<span class="fc" id="L99">        body.append('}');</span>
+
+        // The fallback text for the secrets-closed local check includes the
+        // arguments: a credential passed to an outbound tool is the concrete
+        // exfiltration path, so it is exactly what must still be inspected when the
+        // server is unreachable.
+<span class="fc" id="L105">        GuardVerdict v = evaluate(baseUrl + &quot;/v1/guard&quot;, body.toString(), name + &quot;\n&quot; + args);</span>
+<span class="fc" id="L106">        throwIfBlocked(v);</span>
+<span class="fc" id="L107">        return v;</span>
+    }
+
+    GuardBatchResult checkBatch(List&lt;GuardBatchItem&gt; items) {
+<span class="pc bpc" id="L111" title="1 of 4 branches missed.">        if (items == null || items.isEmpty()) {</span>
+<span class="fc" id="L112">            throw new NirikshaAIException(&quot;guardCheckBatch requires at least one item&quot;);</span>
+        }
+<span class="fc bfc" id="L114" title="All 2 branches covered.">        if (items.size() &gt; MAX_BATCH) {</span>
+<span class="fc" id="L115">            throw new NirikshaAIException(</span>
+<span class="fc" id="L116">                    &quot;guardCheckBatch accepts at most &quot; + MAX_BATCH + &quot; items, got &quot; + items.size());</span>
+        }
+
+<span class="fc" id="L119">        StringBuilder body = new StringBuilder(&quot;{\&quot;items\&quot;:[&quot;);</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">        for (int i = 0; i &lt; items.size(); i++) {</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">            if (i &gt; 0) {</span>
+<span class="fc" id="L122">                body.append(',');</span>
+            }
+<span class="fc" id="L124">            GuardBatchItem item = items.get(i);</span>
+<span class="pc bpc" id="L125" title="2 of 4 branches missed.">            String dir = item.getDirection() == null || item.getDirection().isBlank()</span>
+<span class="pc" id="L126">                    ? &quot;input&quot; : item.getDirection();</span>
+<span class="fc" id="L127">            body.append(&quot;{\&quot;text\&quot;:&quot;).append(jsonString(item.getText()))</span>
+<span class="fc" id="L128">                    .append(&quot;,\&quot;direction\&quot;:&quot;).append(jsonString(dir));</span>
+<span class="fc" id="L129">            appendMode(body);</span>
+<span class="fc" id="L130">            body.append('}');</span>
+        }
+<span class="fc" id="L132">        body.append(&quot;]}&quot;);</span>
+
+<span class="fc" id="L134">        String response = post(baseUrl + &quot;/v1/guard/batch&quot;, body.toString());</span>
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">        if (response == null) {</span>
+<span class="nc" id="L136">            List&lt;GuardVerdict&gt; verdicts = new ArrayList&lt;&gt;(items.size());</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">            for (GuardBatchItem item : items) {</span>
+<span class="nc" id="L138">                verdicts.add(failVerdict(item.getText()));</span>
+<span class="nc" id="L139">            }</span>
+<span class="nc" id="L140">            GuardBatchResult result = new GuardBatchResult(worst(verdicts), verdicts);</span>
+<span class="nc" id="L141">            throwIfBlocked(result);</span>
+<span class="nc" id="L142">            return result;</span>
+        }
+
+<span class="fc" id="L145">        List&lt;GuardVerdict&gt; verdicts = parseResults(response);</span>
+<span class="fc" id="L146">        GuardAction action = parseAggregateAction(response, verdicts);</span>
+<span class="fc" id="L147">        GuardBatchResult result = new GuardBatchResult(action, verdicts);</span>
+<span class="fc" id="L148">        throwIfBlocked(result);</span>
+<span class="fc" id="L149">        return result;</span>
+    }
+
+    // ── internals ───────────────────────────────────────────────────────────
+
+    private void appendMode(StringBuilder body) {
+<span class="pc bpc" id="L155" title="1 of 4 branches missed.">        if (mode != null &amp;&amp; !mode.isBlank()) {</span>
+<span class="fc" id="L156">            body.append(&quot;,\&quot;mode\&quot;:&quot;).append(jsonString(mode));</span>
+        }
+<span class="fc" id="L158">    }</span>
+
+    private void throwIfBlocked(GuardVerdict v) {
+<span class="fc bfc" id="L161" title="All 2 branches covered.">        if (v.getAction() != GuardAction.BLOCK) {</span>
+<span class="fc" id="L162">            return;</span>
+        }
+<span class="fc" id="L164">        throw new GuardBlockedException(v, ruleList(v));</span>
+    }
+
+    private void throwIfBlocked(GuardBatchResult result) {
+<span class="fc bfc" id="L168" title="All 2 branches covered.">        if (result.getAction() != GuardAction.BLOCK) {</span>
+<span class="fc" id="L169">            return;</span>
+        }
+        // One blocked message means the conversation must not be sent, so the
+        // aggregate is what throws — carrying the offending verdict when there is
+        // one, since a policy-mandated block can arrive with no findings.
+<span class="pc bpc" id="L174" title="1 of 2 branches missed.">        for (GuardVerdict v : result.getVerdicts()) {</span>
+<span class="fc bfc" id="L175" title="All 2 branches covered.">            if (v.isBlocked()) {</span>
+<span class="fc" id="L176">                throw new GuardBlockedException(v, ruleList(v));</span>
+            }
+<span class="fc" id="L178">        }</span>
+<span class="nc" id="L179">        throw new GuardBlockedException(</span>
+                new GuardVerdict(GuardAction.BLOCK, null, null, &quot;&quot;, 0, &quot;&quot;, &quot;&quot;, false, false), &quot;&quot;);
+    }
+
+    private static String ruleList(GuardVerdict v) {
+<span class="fc" id="L184">        List&lt;String&gt; rules = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L185" title="All 2 branches covered.">        for (GuardFinding f : v.getFindings()) {</span>
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">            if (!f.getRule().isEmpty()) {</span>
+<span class="fc" id="L187">                rules.add(f.getRule());</span>
+            }
+<span class="fc" id="L189">        }</span>
+<span class="fc" id="L190">        return String.join(&quot;, &quot;, rules);</span>
+    }
+
+    private GuardVerdict evaluate(String url, String body, String fallbackText) {
+<span class="fc" id="L194">        String response = post(url, body);</span>
+<span class="fc bfc" id="L195" title="All 2 branches covered.">        return response == null ? failVerdict(fallbackText) : parseVerdict(response);</span>
+    }
+
+    /**
+     * POSTs to the guard. Returns {@code null} when the guard could not be consulted.
+     *
+     * &lt;p&gt;Deliberately no retry. This is a synchronous call in front of the caller's
+     * model request: retrying turns a 3-second timeout into a 9-second one, and the
+     * fail mode is a better answer than a slower one.
+     */
+    private String post(String url, String body) {
+<span class="pc bpc" id="L206" title="2 of 4 branches missed.">        if (!url.startsWith(&quot;https://&quot;) &amp;&amp; !url.startsWith(&quot;http://&quot;)) {</span>
+<span class="nc" id="L207">            LOGGER.warn(&quot;NirikshaAI guard: refusing non-http(s) URL&quot;);</span>
+<span class="nc" id="L208">            return null;</span>
+        }
+<span class="fc" id="L210">        HttpRequest req = HttpRequest.newBuilder()</span>
+<span class="fc" id="L211">                .uri(URI.create(url))</span>
+<span class="fc" id="L212">                .header(&quot;Content-Type&quot;, &quot;application/json&quot;)</span>
+<span class="fc" id="L213">                .header(&quot;X-API-Key&quot;, apiKey)</span>
+<span class="fc" id="L214">                .timeout(TIMEOUT)</span>
+<span class="fc" id="L215">                .POST(HttpRequest.BodyPublishers.ofString(body))</span>
+<span class="fc" id="L216">                .build();</span>
+        try {
+<span class="fc" id="L218">            HttpResponse&lt;String&gt; resp = HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofString());</span>
+<span class="pc bpc" id="L219" title="1 of 4 branches missed.">            if (resp.statusCode() &lt; 200 || resp.statusCode() &gt;= 300) {</span>
+                // A 4xx is a client bug — a bad key, a malformed body — and means the
+                // guard has never worked rather than that it is briefly down.
+<span class="pc bpc" id="L222" title="1 of 2 branches missed.">                if (resp.statusCode() &lt; 500) {</span>
+<span class="fc" id="L223">                    LOGGER.error(&quot;NirikshaAI guard: {} returned {}&quot;, url, resp.statusCode());</span>
+                } else {
+<span class="nc" id="L225">                    LOGGER.warn(&quot;NirikshaAI guard: {} returned {}&quot;, url, resp.statusCode());</span>
+                }
+<span class="fc" id="L227">                return null;</span>
+            }
+<span class="fc" id="L229">            return resp.body();</span>
+<span class="nc" id="L230">        } catch (InterruptedException e) {</span>
+            // Restoring the flag is required: swallowing it leaves the thread
+            // uninterruptible for whatever runs on it next.
+<span class="nc" id="L233">            Thread.currentThread().interrupt();</span>
+<span class="nc" id="L234">            LOGGER.warn(&quot;NirikshaAI guard: interrupted&quot;);</span>
+<span class="nc" id="L235">            return null;</span>
+<span class="fc" id="L236">        } catch (Exception e) {</span>
+<span class="fc" id="L237">            LOGGER.warn(&quot;NirikshaAI guard: {} unreachable ({})&quot;, url, e.getMessage());</span>
+<span class="fc" id="L238">            return null;</span>
+        }
+    }
+
+    /**
+     * Applies the configured fail mode.
+     *
+     * &lt;p&gt;Never silent. Every fail-open trip logs and is countable, because a security
+     * control that quietly stops working is worse than one that was never installed —
+     * the second is at least known to be absent.
+     */
+    GuardVerdict failVerdict(String text) {
+<span class="fc" id="L250">        countFailOpen();</span>
+
+<span class="fc bfc" id="L252" title="All 2 branches covered.">        if (failMode == GuardFailMode.CLOSED) {</span>
+<span class="fc" id="L253">            LOGGER.warn(&quot;NirikshaAI guard: unreachable and fail mode is closed — blocking&quot;);</span>
+<span class="fc" id="L254">            return new GuardVerdict(GuardAction.BLOCK, null, null, &quot;&quot;, 0, &quot;&quot;, &quot;&quot;, false, true);</span>
+        }
+
+<span class="fc bfc" id="L257" title="All 2 branches covered.">        if (failMode == GuardFailMode.SECRETS_CLOSED) {</span>
+<span class="fc" id="L258">            List&lt;GuardFinding&gt; findings = localSecretFindings(text);</span>
+<span class="fc bfc" id="L259" title="All 2 branches covered.">            if (!findings.isEmpty()) {</span>
+<span class="fc" id="L260">                LOGGER.warn(&quot;NirikshaAI guard: unreachable; blocking locally on {} secret pattern(s)&quot;,</span>
+<span class="fc" id="L261">                        findings.size());</span>
+<span class="fc" id="L262">                return new GuardVerdict(GuardAction.BLOCK, findings, null, &quot;&quot;, 0, &quot;&quot;, &quot;&quot;, false, true);</span>
+            }
+        }
+
+<span class="fc" id="L266">        LOGGER.warn(&quot;NirikshaAI guard: unreachable — allowing text through (fail mode {}). &quot;</span>
+<span class="fc" id="L267">                + &quot;Text is NOT being checked.&quot;, failMode.wireValue());</span>
+<span class="fc" id="L268">        return new GuardVerdict(GuardAction.ALLOW, null, null, &quot;&quot;, 0, &quot;&quot;, &quot;&quot;, false, true);</span>
+    }
+
+    /**
+     * Increments {@code guard.fail_open}.
+     *
+     * &lt;p&gt;The counter is a diagnostic: failing to record it must never turn a guard
+     * outage into an application error.
+     */
+    private void countFailOpen() {
+        try {
+<span class="fc" id="L279">            LongCounter c = failOpenCounter;</span>
+<span class="pc bpc" id="L280" title="1 of 2 branches missed.">            if (c == null) {</span>
+<span class="fc" id="L281">                c = GlobalOpenTelemetry.getMeter(&quot;nirikshaai.guard&quot;)</span>
+<span class="fc" id="L282">                        .counterBuilder(&quot;guard.fail_open&quot;)</span>
+<span class="fc" id="L283">                        .setDescription(&quot;Guard calls that could not reach the server&quot;)</span>
+<span class="fc" id="L284">                        .build();</span>
+<span class="fc" id="L285">                failOpenCounter = c;</span>
+            }
+<span class="fc" id="L287">            c.add(1, Attributes.builder().put(&quot;fail_mode&quot;, failMode.wireValue()).build());</span>
+<span class="nc" id="L288">        } catch (RuntimeException e) {</span>
+<span class="nc" id="L289">            LOGGER.debug(&quot;NirikshaAI guard: could not record the fail_open counter&quot;);</span>
+<span class="fc" id="L290">        }</span>
+<span class="fc" id="L291">    }</span>
+
+    static GuardAction worst(List&lt;GuardVerdict&gt; verdicts) {
+<span class="fc" id="L294">        GuardAction worst = GuardAction.ALLOW;</span>
+<span class="fc bfc" id="L295" title="All 2 branches covered.">        for (GuardVerdict v : verdicts) {</span>
+<span class="fc bfc" id="L296" title="All 2 branches covered.">            if (v.getAction().ordinal() &gt; worst.ordinal()) {</span>
+<span class="fc" id="L297">                worst = v.getAction();</span>
+            }
+<span class="fc" id="L299">        }</span>
+<span class="fc" id="L300">        return worst;</span>
+    }
+
+    // ── response parsing ────────────────────────────────────────────────────
+
+    /**
+     * Reads the batch response's top-level {@code action}, falling back to the most
+     * severe per-item verdict.
+     *
+     * &lt;p&gt;Only the prefix before the {@code results} array is searched. Scanning the
+     * whole body would find the *first item's* action when the top-level one is
+     * absent, silently reporting a two-item batch as whatever its first entry said —
+     * which is how this was originally written, and what the test caught.
+     */
+    GuardAction parseAggregateAction(String json, List&lt;GuardVerdict&gt; verdicts) {
+<span class="fc" id="L315">        int resultsAt = json.indexOf(&quot;\&quot;results\&quot;&quot;);</span>
+<span class="pc bpc" id="L316" title="1 of 2 branches missed.">        String prefix = resultsAt &gt;= 0 ? json.substring(0, resultsAt) : json;</span>
+<span class="fc" id="L317">        String wire = extractString(prefix, &quot;action&quot;);</span>
+<span class="fc bfc" id="L318" title="All 2 branches covered.">        return wire.isEmpty() ? worst(verdicts) : GuardAction.fromWire(wire);</span>
+    }
+
+    GuardVerdict parseVerdict(String json) {
+<span class="fc" id="L322">        return new GuardVerdict(</span>
+<span class="fc" id="L323">                GuardAction.fromWire(extractString(json, &quot;action&quot;)),</span>
+<span class="fc" id="L324">                parseFindings(json),</span>
+<span class="fc" id="L325">                extractStringArray(json, &quot;reasons&quot;),</span>
+<span class="fc" id="L326">                extractString(json, &quot;redacted&quot;),</span>
+<span class="fc" id="L327">                extractInt(json, &quot;risk_score&quot;),</span>
+<span class="fc" id="L328">                extractString(json, &quot;risk_severity&quot;),</span>
+<span class="fc" id="L329">                extractString(json, &quot;policy_source&quot;),</span>
+<span class="fc" id="L330">                extractBool(json, &quot;policy_enforced&quot;),</span>
+                false);
+    }
+
+    /** Splits the {@code results} array of a batch response and parses each entry. */
+    List&lt;GuardVerdict&gt; parseResults(String json) {
+<span class="fc" id="L336">        List&lt;GuardVerdict&gt; out = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L337" title="All 2 branches covered.">        for (String obj : splitObjects(json, &quot;results&quot;)) {</span>
+<span class="fc" id="L338">            out.add(parseVerdict(obj));</span>
+<span class="fc" id="L339">        }</span>
+<span class="fc" id="L340">        return out;</span>
+    }
+
+    private List&lt;GuardFinding&gt; parseFindings(String json) {
+<span class="fc" id="L344">        List&lt;GuardFinding&gt; out = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L345" title="All 2 branches covered.">        for (String obj : splitObjects(json, &quot;findings&quot;)) {</span>
+<span class="fc" id="L346">            out.add(new GuardFinding(</span>
+<span class="fc" id="L347">                    extractString(obj, &quot;category&quot;),</span>
+<span class="fc" id="L348">                    extractString(obj, &quot;severity&quot;),</span>
+<span class="fc" id="L349">                    extractString(obj, &quot;rule&quot;),</span>
+<span class="fc" id="L350">                    extractDouble(obj, &quot;confidence&quot;),</span>
+<span class="fc" id="L351">                    extractInt(obj, &quot;start&quot;),</span>
+<span class="fc" id="L352">                    extractInt(obj, &quot;end&quot;),</span>
+<span class="fc" id="L353">                    extractBool(obj, &quot;local&quot;)));</span>
+<span class="fc" id="L354">        }</span>
+<span class="fc" id="L355">        return out;</span>
+    }
+
+    /**
+     * Extracts each top-level object from the named array.
+     *
+     * &lt;p&gt;Brace-counting rather than a regex, because a finding contains no nested
+     * object today but a regex would break silently the day one does.
+     */
+    private static List&lt;String&gt; splitObjects(String json, String key) {
+<span class="fc" id="L365">        List&lt;String&gt; out = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L366">        int keyAt = json.indexOf(&quot;\&quot;&quot; + key + &quot;\&quot;&quot;);</span>
+<span class="fc bfc" id="L367" title="All 2 branches covered.">        if (keyAt &lt; 0) {</span>
+<span class="fc" id="L368">            return out;</span>
+        }
+<span class="fc" id="L370">        int arrayStart = json.indexOf('[', keyAt);</span>
+<span class="pc bpc" id="L371" title="1 of 2 branches missed.">        if (arrayStart &lt; 0) {</span>
+<span class="nc" id="L372">            return out;</span>
+        }
+<span class="fc" id="L374">        int depth = 0;</span>
+<span class="fc" id="L375">        int start = -1;</span>
+<span class="pc bpc" id="L376" title="1 of 2 branches missed.">        for (int i = arrayStart + 1; i &lt; json.length(); i++) {</span>
+<span class="fc" id="L377">            char c = json.charAt(i);</span>
+<span class="fc bfc" id="L378" title="All 4 branches covered.">            if (c == ']' &amp;&amp; depth == 0) {</span>
+<span class="fc" id="L379">                break;</span>
+<span class="fc bfc" id="L380" title="All 2 branches covered.">            } else if (c == '{') {</span>
+<span class="fc bfc" id="L381" title="All 2 branches covered.">                if (depth == 0) {</span>
+<span class="fc" id="L382">                    start = i;</span>
+                }
+<span class="fc" id="L384">                depth++;</span>
+<span class="fc bfc" id="L385" title="All 2 branches covered.">            } else if (c == '}') {</span>
+<span class="fc" id="L386">                depth--;</span>
+<span class="pc bpc" id="L387" title="1 of 4 branches missed.">                if (depth == 0 &amp;&amp; start &gt;= 0) {</span>
+<span class="fc" id="L388">                    out.add(json.substring(start, i + 1));</span>
+<span class="fc" id="L389">                    start = -1;</span>
+                }
+            }
+        }
+<span class="fc" id="L393">        return out;</span>
+    }
+
+    private static String extractString(String json, String key) {
+<span class="fc" id="L397">        Matcher m = Pattern.compile(&quot;\&quot;&quot; + key + &quot;\&quot;\\s*:\\s*\&quot;((?:[^\&quot;\\\\]|\\\\.)*)\&quot;&quot;)</span>
+<span class="fc" id="L398">                .matcher(json);</span>
+<span class="fc bfc" id="L399" title="All 2 branches covered.">        return m.find() ? m.group(1).replace(&quot;\\\&quot;&quot;, &quot;\&quot;&quot;).replace(&quot;\\\\&quot;, &quot;\\&quot;) : &quot;&quot;;</span>
+    }
+
+    private static List&lt;String&gt; extractStringArray(String json, String key) {
+<span class="fc" id="L403">        Matcher m = Pattern.compile(&quot;\&quot;&quot; + key + &quot;\&quot;\\s*:\\s*\\[([^\\]]*)\\]&quot;).matcher(json);</span>
+<span class="fc bfc" id="L404" title="All 2 branches covered.">        if (!m.find()) {</span>
+<span class="fc" id="L405">            return List.of();</span>
+        }
+<span class="fc" id="L407">        List&lt;String&gt; out = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L408">        Matcher items = Pattern.compile(&quot;\&quot;((?:[^\&quot;\\\\]|\\\\.)*)\&quot;&quot;).matcher(m.group(1));</span>
+<span class="fc bfc" id="L409" title="All 2 branches covered.">        while (items.find()) {</span>
+<span class="fc" id="L410">            out.add(items.group(1));</span>
+        }
+<span class="fc" id="L412">        return out;</span>
+    }
+
+    private static int extractInt(String json, String key) {
+<span class="fc" id="L416">        Matcher m = Pattern.compile(&quot;\&quot;&quot; + key + &quot;\&quot;\\s*:\\s*(-?\\d+)&quot;).matcher(json);</span>
+<span class="fc bfc" id="L417" title="All 2 branches covered.">        return m.find() ? Integer.parseInt(m.group(1)) : 0;</span>
+    }
+
+    private static double extractDouble(String json, String key) {
+<span class="fc" id="L421">        Matcher m = Pattern.compile(&quot;\&quot;&quot; + key + &quot;\&quot;\\s*:\\s*(-?\\d+(?:\\.\\d+)?)&quot;).matcher(json);</span>
+<span class="fc bfc" id="L422" title="All 2 branches covered.">        return m.find() ? Double.parseDouble(m.group(1)) : 0.0;</span>
+    }
+
+    private static boolean extractBool(String json, String key) {
+<span class="fc" id="L426">        Matcher m = Pattern.compile(&quot;\&quot;&quot; + key + &quot;\&quot;\\s*:\\s*(true|false)&quot;).matcher(json);</span>
+<span class="pc bpc" id="L427" title="1 of 4 branches missed.">        return m.find() &amp;&amp; &quot;true&quot;.equals(m.group(1));</span>
+    }
+
+    private static String jsonString(String s) {
+<span class="pc bpc" id="L431" title="1 of 2 branches missed.">        if (s == null) {</span>
+<span class="nc" id="L432">            return &quot;\&quot;\&quot;&quot;;</span>
+        }
+<span class="fc" id="L434">        return &quot;\&quot;&quot; + s.replace(&quot;\\&quot;, &quot;\\\\&quot;).replace(&quot;\&quot;&quot;, &quot;\\\&quot;&quot;)</span>
+<span class="fc" id="L435">                .replace(&quot;\n&quot;, &quot;\\n&quot;).replace(&quot;\r&quot;, &quot;\\r&quot;).replace(&quot;\t&quot;, &quot;\\t&quot;) + &quot;\&quot;&quot;;</span>
+    }
+
+    // ── local secret patterns, for SECRETS_CLOSED ───────────────────────────
+    //
+    // A deliberately small, prefix-anchored subset of the server's set. The point is
+    // not parity — the server has eighteen patterns, entropy gating and a placeholder
+    // denylist — but that the highest-confidence, zero-false-positive formats are
+    // still caught with no network call. Every one is a vendor's own key prefix, so a
+    // match is near-certain and a non-match is cheap.
+
+<span class="fc" id="L446">    private static final Map&lt;String, Pattern&gt; LOCAL_SECRETS = Map.of(</span>
+<span class="fc" id="L447">            &quot;aws_access_key&quot;, Pattern.compile(&quot;\\b(?:AKIA|ASIA)[0-9A-Z]{16}\\b&quot;),</span>
+<span class="fc" id="L448">            &quot;github_token&quot;, Pattern.compile(&quot;\\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}\\b&quot;),</span>
+<span class="fc" id="L449">            &quot;github_pat&quot;, Pattern.compile(&quot;\\bgithub_pat_[A-Za-z0-9_]{22,}\\b&quot;),</span>
+<span class="fc" id="L450">            &quot;slack_token&quot;, Pattern.compile(&quot;\\bxox[baprs]-[A-Za-z0-9-]{10,}\\b&quot;),</span>
+<span class="fc" id="L451">            &quot;stripe_secret_key&quot;, Pattern.compile(&quot;\\b(?:sk|rk)_live_[A-Za-z0-9]{20,}\\b&quot;),</span>
+<span class="fc" id="L452">            &quot;google_api_key&quot;, Pattern.compile(&quot;\\bAIza[0-9A-Za-z_-]{35}\\b&quot;),</span>
+<span class="fc" id="L453">            &quot;anthropic_api_key&quot;, Pattern.compile(&quot;\\bsk-ant-[A-Za-z0-9_-]{20,}\\b&quot;),</span>
+<span class="fc" id="L454">            &quot;openai_api_key&quot;, Pattern.compile(&quot;\\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\\b&quot;),</span>
+            &quot;private_key_block&quot;,
+<span class="fc" id="L456">            Pattern.compile(&quot;-----BEGIN (?:RSA |EC |OPENSSH |PGP |DSA )?PRIVATE KEY-----&quot;),</span>
+<span class="fc" id="L457">            &quot;niriksha_api_key&quot;, Pattern.compile(&quot;\\bnai_(?:plat_)?[A-Za-z0-9]{20,}\\b&quot;));</span>
+
+    /**
+     * Documentation values that match a real pattern.
+     *
+     * &lt;p&gt;Without this the local check would block on a README, and the first person
+     * it inconveniences would switch the mode off.
+     */
+<span class="fc" id="L465">    private static final Set&lt;String&gt; LOCAL_PLACEHOLDERS =</span>
+<span class="fc" id="L466">            Set.of(&quot;akiaiosfodnn7example&quot;, &quot;aws_access_key_id&quot;);</span>
+
+    /** Detects embedded secret formats without calling the server. */
+    static List&lt;GuardFinding&gt; localSecretFindings(String text) {
+<span class="fc bfc" id="L470" title="All 4 branches covered.">        if (text == null || text.isEmpty()) {</span>
+<span class="fc" id="L471">            return List.of();</span>
+        }
+<span class="fc" id="L473">        List&lt;GuardFinding&gt; out = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L474" title="All 2 branches covered.">        for (Map.Entry&lt;String, Pattern&gt; e : LOCAL_SECRETS.entrySet()) {</span>
+<span class="fc" id="L475">            Matcher m = e.getValue().matcher(text);</span>
+<span class="fc bfc" id="L476" title="All 2 branches covered.">            while (m.find()) {</span>
+<span class="fc bfc" id="L477" title="All 2 branches covered.">                if (LOCAL_PLACEHOLDERS.contains(m.group().toLowerCase(Locale.ROOT))) {</span>
+<span class="fc" id="L478">                    continue;</span>
+                }
+<span class="fc" id="L480">                out.add(new GuardFinding(&quot;secret&quot;, &quot;critical&quot;, e.getKey(), 0.95,</span>
+<span class="fc" id="L481">                        m.start(), m.end(), true));</span>
+            }
+<span class="fc" id="L483">        }</span>
+<span class="fc" id="L484">        return out;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

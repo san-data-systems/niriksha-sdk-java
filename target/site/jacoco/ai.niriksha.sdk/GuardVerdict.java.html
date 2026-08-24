@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GuardVerdict.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">GuardVerdict.java</span></div><h1>GuardVerdict.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+import java.util.List;
+
+/** The guard's decision about one piece of text. */
+public final class GuardVerdict {
+
+    private final GuardAction action;
+    private final List&lt;GuardFinding&gt; findings;
+    private final List&lt;String&gt; reasons;
+    private final String redacted;
+    private final int riskScore;
+    private final String riskSeverity;
+    private final String policySource;
+    private final boolean policyEnforced;
+    private final boolean failedOpen;
+
+    GuardVerdict(GuardAction action, List&lt;GuardFinding&gt; findings, List&lt;String&gt; reasons,
+            String redacted, int riskScore, String riskSeverity,
+<span class="fc" id="L20">            String policySource, boolean policyEnforced, boolean failedOpen) {</span>
+<span class="pc bpc" id="L21" title="1 of 2 branches missed.">        this.action         = action != null ? action : GuardAction.ALLOW;</span>
+<span class="fc bfc" id="L22" title="All 2 branches covered.">        this.findings       = findings != null ? List.copyOf(findings) : List.of();</span>
+<span class="fc bfc" id="L23" title="All 2 branches covered.">        this.reasons        = reasons != null ? List.copyOf(reasons) : List.of();</span>
+<span class="pc bpc" id="L24" title="1 of 2 branches missed.">        this.redacted       = redacted != null ? redacted : &quot;&quot;;</span>
+<span class="fc" id="L25">        this.riskScore      = riskScore;</span>
+<span class="pc bpc" id="L26" title="1 of 2 branches missed.">        this.riskSeverity   = riskSeverity != null ? riskSeverity : &quot;&quot;;</span>
+<span class="pc bpc" id="L27" title="1 of 2 branches missed.">        this.policySource   = policySource != null ? policySource : &quot;&quot;;</span>
+<span class="fc" id="L28">        this.policyEnforced = policyEnforced;</span>
+<span class="fc" id="L29">        this.failedOpen     = failedOpen;</span>
+<span class="fc" id="L30">    }</span>
+
+    /** What the caller should do with the text. */
+    public GuardAction getAction() {
+<span class="fc" id="L34">        return action;</span>
+    }
+
+    /** Every detection, never {@code null}. */
+    public List&lt;GuardFinding&gt; getFindings() {
+<span class="fc" id="L39">        return findings;</span>
+    }
+
+    /**
+     * Low-precision detections that were recorded but did not influence the action.
+     *
+     * &lt;p&gt;Surfaced so an operator can see what the guard noticed without it becoming
+     * a block.
+     */
+    public List&lt;String&gt; getReasons() {
+<span class="fc" id="L49">        return reasons;</span>
+    }
+
+    /** The rewritten text. Non-empty only when the action is {@link GuardAction#REDACT}. */
+    public String getRedacted() {
+<span class="fc" id="L54">        return redacted;</span>
+    }
+
+    /** 0..100. {@code min(100, sum(severity_weight * confidence))}. */
+    public int getRiskScore() {
+<span class="fc" id="L59">        return riskScore;</span>
+    }
+
+    /** The band of {@link #getRiskScore()}: low, medium, high or critical. */
+    public String getRiskSeverity() {
+<span class="fc" id="L64">        return riskSeverity;</span>
+    }
+
+    /**
+     * {@code project} when an operator's stored AIDR policy was applied,
+     * {@code default} when the product default was.
+     *
+     * &lt;p&gt;Only {@code project} is binding: a monitor-mode call cannot lift a block
+     * that an operator's own policy mandates.
+     */
+    public String getPolicySource() {
+<span class="fc" id="L75">        return policySource;</span>
+    }
+
+    /**
+     * Whether the applied block is mandated by the operator's policy rather than by
+     * rule precision alone.
+     *
+     * &lt;p&gt;Lets a caller receiving an unexpected block tell a detection change from a
+     * policy change.
+     */
+    public boolean isPolicyEnforced() {
+<span class="nc" id="L86">        return policyEnforced;</span>
+    }
+
+    /**
+     * Whether the guard was unreachable and the configured fail mode decided the
+     * outcome.
+     *
+     * &lt;p&gt;Never silently {@code true}: a warning is logged whenever it is set.
+     */
+    public boolean failedOpen() {
+<span class="fc" id="L96">        return failedOpen;</span>
+    }
+
+    /** Convenience for {@code getAction() == GuardAction.BLOCK}. */
+    public boolean isBlocked() {
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        return action == GuardAction.BLOCK;</span>
+    }
+
+    /**
+     * Returns the text that is safe to send: the redaction when there was one, the
+     * original otherwise.
+     *
+     * &lt;p&gt;Exists so no caller has to write the equivalent conditional, which is easy
+     * to get wrong in the direction that forwards the secret. Also returns the
+     * original when a malformed redact verdict carries no text, rather than silently
+     * substituting an empty prompt.
+     */
+    public String safeText(String original) {
+<span class="fc bfc" id="L114" title="All 4 branches covered.">        return action == GuardAction.REDACT &amp;&amp; !redacted.isEmpty() ? redacted : original;</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L119">        return &quot;GuardVerdict{action=&quot; + action + &quot;, riskScore=&quot; + riskScore</span>
+<span class="nc" id="L120">                + &quot;, findings=&quot; + findings.size() + &quot;}&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

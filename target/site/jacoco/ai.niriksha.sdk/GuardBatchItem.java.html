@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GuardBatchItem.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">GuardBatchItem.java</span></div><h1>GuardBatchItem.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+/** One entry in a batch guard request. */
+public final class GuardBatchItem {
+
+    private final String text;
+    private final String direction;
+
+<span class="fc" id="L9">    private GuardBatchItem(String text, String direction) {</span>
+<span class="fc" id="L10">        this.text      = text;</span>
+<span class="fc" id="L11">        this.direction = direction;</span>
+<span class="fc" id="L12">    }</span>
+
+    /** An input item — a prompt heading to the model. */
+    public static GuardBatchItem input(String text) {
+<span class="fc" id="L16">        return new GuardBatchItem(text, &quot;input&quot;);</span>
+    }
+
+    /** An output item — a completion coming back. */
+    public static GuardBatchItem output(String text) {
+<span class="fc" id="L21">        return new GuardBatchItem(text, &quot;output&quot;);</span>
+    }
+
+    public String getText() {
+<span class="fc" id="L25">        return text;</span>
+    }
+
+    /** {@code input} or {@code output}. */
+    public String getDirection() {
+<span class="fc" id="L30">        return direction;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

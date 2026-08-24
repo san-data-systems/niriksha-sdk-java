@@ -69,6 +69,7 @@ public final class NirikshaAI {
     // Shared state populated by Builder.build() — used by eval/prompt helpers.
     private static volatile EvalClient evalClient;
     private static volatile PromptClient promptClient;
+    private static volatile GuardClient guardClient;
     private static volatile boolean initialized;
 
     private NirikshaAI() {
@@ -184,6 +185,85 @@ public final class NirikshaAI {
     }
 
     // -------------------------------------------------------------------------
+    // Inline guard
+    // -------------------------------------------------------------------------
+
+    /**
+     * Checks a prompt before sending it to the model.
+     *
+     * <p>Equivalent to {@code guardCheck(text, "input")}.
+     *
+     * @throws GuardBlockedException if the verdict is a block
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     */
+    public static GuardVerdict guardCheck(String text) {
+        return guardClient().check(text, "input");
+    }
+
+    /**
+     * Checks a prompt or completion.
+     *
+     * <p>A redact verdict returns normally — use
+     * {@link GuardVerdict#safeText(String)} to get the text that is safe to send.
+     * Only a block throws, because a customer who asked for PII stripping wants
+     * their data protected, not their application broken.
+     *
+     * @param text      the text to check
+     * @param direction {@code "input"} for a prompt heading to the model,
+     *                  {@code "output"} for a completion coming back. Injection and
+     *                  jailbreak rules apply to input only; secrets and PII to both.
+     * @throws GuardBlockedException if the verdict is a block
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     */
+    public static GuardVerdict guardCheck(String text, String direction) {
+        return guardClient().check(text, direction);
+    }
+
+    /**
+     * Checks a tool call before executing it.
+     *
+     * <p>This is the check that can actually prevent an action — an {@code rm -rf},
+     * an unscoped {@code DELETE}, a credential read, an outbound request carrying a
+     * key. Observing the tool call afterwards cannot.
+     *
+     * @param name          the tool being invoked
+     * @param argumentsJson the arguments, already serialised as JSON. Pass
+     *                      {@code null} or empty to check the name alone.
+     * @throws GuardBlockedException if the verdict is a block
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     */
+    public static GuardVerdict guardCheckTool(String name, String argumentsJson) {
+        return guardClient().checkTool(name, argumentsJson);
+    }
+
+    /**
+     * Checks a whole message array in one request.
+     *
+     * <p>A per-string API is an N+1 for a multi-turn conversation, which is every
+     * real chat application. At most 32 items.
+     *
+     * <p>The returned action is the most severe of the set, because one blocked
+     * message means the conversation must not be sent.
+     *
+     * @throws GuardBlockedException if the aggregate verdict is a block
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     */
+    public static GuardBatchResult guardCheckBatch(java.util.List<GuardBatchItem> items) {
+        return guardClient().checkBatch(items);
+    }
+
+    /**
+     * Runs the SDK's embedded secret patterns against a string, without calling the
+     * guard.
+     *
+     * <p>Useful for data you are about to log, where depending on the guard being
+     * reachable would be the wrong trade.
+     */
+    public static java.util.List<GuardFinding> localSecretFindings(String text) {
+        return GuardClient.localSecretFindings(text);
+    }
+
+    // -------------------------------------------------------------------------
     // Internal accessors
     // -------------------------------------------------------------------------
 
@@ -191,6 +271,7 @@ public final class NirikshaAI {
     static void resetForTest() {
         evalClient = null;
         promptClient = null;
+        guardClient = null;
         initialized = false;
     }
 
@@ -205,6 +286,15 @@ public final class NirikshaAI {
 
     private static PromptClient promptClient() {
         PromptClient c = promptClient;
+        if (c == null) {
+            throw new IllegalStateException(
+                    "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
+        }
+        return c;
+    }
+
+    private static GuardClient guardClient() {
+        GuardClient c = guardClient;
         if (c == null) {
             throw new IllegalStateException(
                     "NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first");
@@ -239,6 +329,15 @@ public final class NirikshaAI {
 
         /** OpenTelemetry {@code deployment.environment} resource attribute. */
         private String environment = "production";
+
+        /** Base URL of the guard endpoint; derived when unset. */
+        private String guardEndpoint;
+
+        /** What the guard does when the server is unreachable. */
+        private GuardFailMode guardFailMode = GuardFailMode.OPEN;
+
+        /** Default mode for every guard call. */
+        private String guardMode;
 
         /** gRPC port when deriving the OTLP address from {@link #endpoint}. */
         private int otlpPort = 4317;
@@ -382,6 +481,43 @@ public final class NirikshaAI {
          * Sets the head-based trace sampling rate (0.0–1.0).
          * Use 0.1 to sample ~10% of traces. Default: 1.0 (sample all).
          */
+        /**
+         * Base URL of the guard endpoint — the OTLP gateway's HTTP listener, e.g.
+         * {@code "https://ingest.niriksha.ai"}.
+         *
+         * <p>The guard is served by the gateway, not the REST API, so in SaaS these
+         * are different hosts. Derived from {@link #otlpEndpoint} when set and from
+         * {@link #endpoint} when not.
+         */
+        public Builder guardEndpoint(String guardEndpoint) {
+            this.guardEndpoint = guardEndpoint;
+            return this;
+        }
+
+        /**
+         * What the guard does when it cannot reach the server. Defaults to
+         * {@link GuardFailMode#OPEN}.
+         *
+         * <p>Every fall-back logs a warning and increments {@code guard.fail_open} —
+         * it is never silent.
+         */
+        public Builder guardFailMode(GuardFailMode guardFailMode) {
+            this.guardFailMode = guardFailMode != null ? guardFailMode : GuardFailMode.OPEN;
+            return this;
+        }
+
+        /**
+         * Default mode sent with every guard call: {@code "monitor"} to observe what
+         * would be blocked without enforcing, or {@code "block"}.
+         *
+         * <p>Note that {@code "monitor"} cannot lift a block your org's AIDR policy
+         * mandates.
+         */
+        public Builder guardMode(String guardMode) {
+            this.guardMode = guardMode;
+            return this;
+        }
+
         public Builder sampleRate(double sampleRate) {
             this.sampleRate = sampleRate;
             return this;
@@ -483,6 +619,11 @@ public final class NirikshaAI {
             String restBase = endpoint != null ? endpoint : "https://app.niriksha.ai";
             NirikshaAI.evalClient = new EvalClient(restBase, apiKey);
             NirikshaAI.promptClient = new PromptClient(restBase, apiKey);
+            // The guard is served by the OTLP gateway, not the REST API, so its base
+            // URL is derived separately — see deriveGuardUrl.
+            NirikshaAI.guardClient = new GuardClient(
+                    guardEndpoint != null ? guardEndpoint : deriveGuardUrl(restBase, otlpEndpoint),
+                    apiKey, guardFailMode, guardMode);
             NirikshaAI.initialized = true;
 
             // Quota errors are surfaced via the OpenTelemetry diagnostic logger
@@ -494,6 +635,61 @@ public final class NirikshaAI {
         // -----------------------------------------------------------------------
         // Internal helpers
         // -----------------------------------------------------------------------
+
+        /** The gateway's OTLP gRPC port and its HTTP port, where /v1/guard lives. */
+        private static final String OTLP_GRPC_PORT = "4317";
+        private static final String OTLP_HTTP_PORT = "4318";
+
+        /**
+         * Best-effort guard base URL, so the common cases need no extra option.
+         *
+         * <p>The guard endpoint is served by the OTLP gateway, not the REST API, and
+         * in SaaS those are different hosts — so {@code endpoint} alone is not the
+         * answer.
+         *
+         * <p>When {@code otlpEndpoint} is given it names the gateway, which is the
+         * right host; only its port and scheme need translating. The gateway's gRPC
+         * listener is 4317 and its HTTP listener 4318, so a default deployment maps
+         * cleanly. A non-default port (443 behind an ingress, say) is kept as
+         * configured, because guessing would be worse than reusing what the caller
+         * already set.
+         *
+         * <p>With no {@code otlpEndpoint} — the single-host Private Cloud layout —
+         * the REST base is also the gateway, so it is used unchanged.
+         *
+         * <p>Set {@link #guardEndpoint} explicitly for anything this does not cover;
+         * getting it wrong shows up as a guard that logs "unreachable" on every call,
+         * which is loud but only after the fact.
+         */
+        static String deriveGuardUrl(String base, String otlpEndpoint) {
+            if (otlpEndpoint == null || otlpEndpoint.isBlank()) {
+                return base;
+            }
+
+            String host = otlpEndpoint;
+            String scheme = "https";
+            int schemeAt = host.indexOf("://");
+            if (schemeAt >= 0) {
+                scheme = host.substring(0, schemeAt);
+                host = host.substring(schemeAt + 3);
+            }
+
+            int portAt = host.lastIndexOf(':');
+            if (portAt > 0) {
+                String hostname = host.substring(0, portAt);
+                String port = host.substring(portAt + 1);
+                if (OTLP_GRPC_PORT.equals(port)) {
+                    port = OTLP_HTTP_PORT;
+                    // A bare gRPC port means a direct, usually in-cluster gateway,
+                    // which is typically plaintext. TLS-terminated deployments set
+                    // 443 and are left alone by the branch above.
+                    scheme = "http";
+                }
+                return scheme + "://" + hostname + ":" + port;
+            }
+
+            return scheme + "://" + host;
+        }
 
         /**
          * Decides whether to use TLS.

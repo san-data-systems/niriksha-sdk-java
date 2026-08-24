@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GuardAction.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">GuardAction.java</span></div><h1>GuardAction.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+/**
+ * What the caller should do with the checked text.
+ *
+ * &lt;p&gt;Ordered from least to most severe, so verdicts can be combined by taking the
+ * maximum.
+ */
+<span class="fc" id="L9">public enum GuardAction {</span>
+
+    /** Nothing was found. Proceed. */
+<span class="fc" id="L12">    ALLOW(&quot;allow&quot;),</span>
+
+    /**
+     * Something was found that is not reliable enough to act on.
+     *
+     * &lt;p&gt;Proceed, and record it. Blocking on the broad heuristics is what makes
+     * people switch a guard off, after which it protects nothing.
+     */
+<span class="fc" id="L20">    TAG(&quot;tag&quot;),</span>
+
+    /**
+     * Sensitive content was found and removed.
+     *
+     * &lt;p&gt;Proceed with {@link GuardVerdict#safeText(String)}. This is not a block: a
+     * customer who asked for PII stripping wants their data protected, not their
+     * application broken.
+     */
+<span class="fc" id="L29">    REDACT(&quot;redact&quot;),</span>
+
+    /** High-confidence attack. Do not send the text. */
+<span class="fc" id="L32">    BLOCK(&quot;block&quot;);</span>
+
+    private final String wire;
+
+<span class="fc" id="L36">    GuardAction(String wire) {</span>
+<span class="fc" id="L37">        this.wire = wire;</span>
+<span class="fc" id="L38">    }</span>
+
+    /** The value used on the wire. */
+    public String wireValue() {
+<span class="nc" id="L42">        return wire;</span>
+    }
+
+    /**
+     * Parses a wire value.
+     *
+     * &lt;p&gt;An unrecognised value maps to {@link #ALLOW} — the weakest action — so a
+     * server that invents a new one cannot accidentally outrank a block, and a typo
+     * cannot silently start blocking traffic.
+     */
+    static GuardAction fromWire(String value) {
+<span class="fc bfc" id="L53" title="All 2 branches covered.">        if (value == null) {</span>
+<span class="fc" id="L54">            return ALLOW;</span>
+        }
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        for (GuardAction a : values()) {</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">            if (a.wire.equals(value)) {</span>
+<span class="fc" id="L58">                return a;</span>
+            }
+        }
+<span class="fc" id="L61">        return ALLOW;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,23 +1,31 @@
 GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+NirikshaAI Java SDK,ai.niriksha.sdk,GuardBatchItem,0,27,0,0,0,8,0,5,0,5
 NirikshaAI Java SDK,ai.niriksha.sdk,EvalInput,0,81,0,0,0,23,0,12,0,12
+NirikshaAI Java SDK,ai.niriksha.sdk,GuardFailMode,0,35,0,0,0,8,0,3,0,3
 NirikshaAI Java SDK,ai.niriksha.sdk,ToolCall.Builder,0,49,0,8,0,13,0,9,0,5
 NirikshaAI Java SDK,ai.niriksha.sdk,EvalClient,361,22,38,0,76,8,25,2,6,2
 NirikshaAI Java SDK,ai.niriksha.sdk,PromptResponse,0,64,0,6,0,17,0,12,0,9
 NirikshaAI Java SDK,ai.niriksha.sdk,BaggageHelper,0,21,0,2,0,7,0,3,0,2
 NirikshaAI Java SDK,ai.niriksha.sdk,EvalInput.Builder,5,107,5,9,1,31,5,14,0,12
-NirikshaAI Java SDK,ai.niriksha.sdk,NirikshaAI,67,30,5,1,24,13,10,6,7,6
+NirikshaAI Java SDK,ai.niriksha.sdk,NirikshaAI,91,41,6,2,30,17,16,7,12,7
+NirikshaAI Java SDK,ai.niriksha.sdk,GuardBlockedException,0,16,0,2,0,4,0,3,0,2
 NirikshaAI Java SDK,ai.niriksha.sdk,PromptClient,213,275,27,29,52,65,25,19,7,9
 NirikshaAI Java SDK,ai.niriksha.sdk,SpanHelpers,0,136,0,14,0,38,0,11,0,4
 NirikshaAI Java SDK,ai.niriksha.sdk,ShutdownHook,6,104,3,3,5,27,5,5,2,5
-NirikshaAI Java SDK,ai.niriksha.sdk,NirikshaAI.Builder,300,306,28,24,85,88,31,22,11,16
+NirikshaAI Java SDK,ai.niriksha.sdk,NirikshaAI.Builder,326,384,33,33,92,107,38,26,14,17
 NirikshaAI Java SDK,ai.niriksha.sdk,GetPromptOptions.Builder,0,33,0,0,0,9,0,5,0,5
 NirikshaAI Java SDK,ai.niriksha.sdk,ToolCall,0,35,0,0,0,11,0,6,0,6
 NirikshaAI Java SDK,ai.niriksha.sdk,ServerlessWrapper,0,10,0,0,0,5,0,2,0,2
+NirikshaAI Java SDK,ai.niriksha.sdk,GuardFinding,15,48,3,3,3,14,6,6,3,6
 NirikshaAI Java SDK,ai.niriksha.sdk,NirikshaAI.Builder.new X509TrustManager() {...},11,0,0,0,4,0,4,0,4,0
+NirikshaAI Java SDK,ai.niriksha.sdk,GuardBatchResult,2,22,2,2,0,6,2,3,0,3
 NirikshaAI Java SDK,ai.niriksha.sdk,RagChunk,0,35,0,0,0,11,0,6,0,6
+NirikshaAI Java SDK,ai.niriksha.sdk,GuardClient,87,936,22,98,19,214,21,65,0,26
 NirikshaAI Java SDK,ai.niriksha.sdk,RagChunk.Builder,0,49,0,8,0,13,0,9,0,5
+NirikshaAI Java SDK,ai.niriksha.sdk,GuardVerdict,17,97,4,14,3,21,6,16,2,11
 NirikshaAI Java SDK,ai.niriksha.sdk,PiiRedactor,2,41,1,1,1,10,1,2,0,2
 NirikshaAI Java SDK,ai.niriksha.sdk,PromptClient.CacheEntry,9,0,0,0,1,0,1,0,1,0
+NirikshaAI Java SDK,ai.niriksha.sdk,GuardAction,3,68,0,6,1,14,1,6,1,3
 NirikshaAI Java SDK,ai.niriksha.sdk,NirikshaAIException,5,4,0,0,2,2,1,1,1,1
 NirikshaAI Java SDK,ai.niriksha.sdk,GetPromptOptions,0,25,0,0,0,7,0,4,0,4
 NirikshaAI Java SDK,ai.niriksha.sdk.spring,NirikshaAIAutoConfiguration,51,0,4,0,16,0,4,0,2,0
