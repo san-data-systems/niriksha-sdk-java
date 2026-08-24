@@ -1,3 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <checkstyle version="9.3">
+<file name="/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/NirikshaAI.java">
+</file>
+<file name="/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardBlockedException.java">
+</file>
+<file name="/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardClient.java">
+</file>
+<file name="/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardFinding.java">
+</file>
+<file name="/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/EvalClient.java">
+</file>
+<file name="/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardBatchItem.java">
+</file>
+<file name="/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardBatchResult.java">
+</file>
+<file name="/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/PromptClient.java">
+</file>
+<file name="/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardAction.java">
+</file>
+<file name="/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardFailMode.java">
+</file>
+<file name="/Users/sandata/2026/niriksha-sdk-java/src/main/java/ai/niriksha/sdk/GuardVerdict.java">
+</file>
 </checkstyle>
