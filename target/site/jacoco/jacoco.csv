@@ -12,7 +12,7 @@ NirikshaAI Java SDK,ai.niriksha.sdk,GuardBlockedException,0,16,0,2,0,4,0,3,0,2
 NirikshaAI Java SDK,ai.niriksha.sdk,PromptClient,213,275,27,29,52,65,25,19,7,9
 NirikshaAI Java SDK,ai.niriksha.sdk,SpanHelpers,0,136,0,14,0,38,0,11,0,4
 NirikshaAI Java SDK,ai.niriksha.sdk,ShutdownHook,6,104,3,3,5,27,5,5,2,5
-NirikshaAI Java SDK,ai.niriksha.sdk,NirikshaAI.Builder,326,384,33,33,92,107,38,26,14,17
+NirikshaAI Java SDK,ai.niriksha.sdk,NirikshaAI.Builder,326,386,33,33,92,107,38,26,14,17
 NirikshaAI Java SDK,ai.niriksha.sdk,GetPromptOptions.Builder,0,33,0,0,0,9,0,5,0,5
 NirikshaAI Java SDK,ai.niriksha.sdk,ToolCall,0,35,0,0,0,11,0,6,0,6
 NirikshaAI Java SDK,ai.niriksha.sdk,ServerlessWrapper,0,10,0,0,0,5,0,2,0,2

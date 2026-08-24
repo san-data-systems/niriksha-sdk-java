@@ -15,7 +15,6 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
-import io.opentelemetry.semconv.ResourceAttributes;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
@@ -550,8 +549,16 @@ public final class NirikshaAI {
 
             Resource resource = Resource.getDefault().merge(
                     Resource.builder()
-                            .put(ResourceAttributes.SERVICE_NAME, serviceName)
-                            .put(ResourceAttributes.DEPLOYMENT_ENVIRONMENT, environment)
+                            // Literal keys rather than the semconv artifact. These are
+                            // the only two constants the SDK needed from it, and the
+                            // stable semconv split them across artifacts — SERVICE_NAME
+                            // went stable, DEPLOYMENT_ENVIRONMENT moved to incubating as
+                            // deployment.environment.name. The backend indexes the
+                            // classic "deployment.environment" key (the Go and Node SDKs
+                            // pin it the same way), so following the rename would
+                            // silently break environment filtering.
+                            .put(AttributeKey.stringKey("service.name"), serviceName)
+                            .put(AttributeKey.stringKey("deployment.environment"), environment)
                             .put(AttributeKey.stringKey("telemetry.sdk.version"), SdkVersion.VERSION)
                             .put(AttributeKey.stringKey("telemetry.sdk.language"), SdkVersion.LANGUAGE)
                             .build());
