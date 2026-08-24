@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PromptResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">PromptResponse.java</span></div><h1>PromptResponse.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+import java.util.List;
+
+/**
+ * A versioned prompt template returned by {@link NirikshaAI#getPrompt}.
+ *
+ * &lt;p&gt;The {@link #getText()} value has already had all {@code {{variable}}} placeholders
+ * substituted server-side when variables were supplied to {@code GetPromptOptions}.
+ */
+public final class PromptResponse {
+
+    private final String name;
+    private final int version;
+    private final String text;
+    private final String description;
+    private final List&lt;String&gt; tags;
+    private final String createdAt;
+    private final String updatedAt;
+
+    PromptResponse(String name, int version, String text, String description,
+<span class="fc" id="L22">            List&lt;String&gt; tags, String createdAt, String updatedAt) {</span>
+<span class="fc" id="L23">        this.name        = name;</span>
+<span class="fc" id="L24">        this.version     = version;</span>
+<span class="fc" id="L25">        this.text        = text;</span>
+<span class="fc" id="L26">        this.description = description;</span>
+<span class="fc bfc" id="L27" title="All 2 branches covered.">        this.tags        = tags != null ? List.copyOf(tags) : List.of();</span>
+<span class="fc bfc" id="L28" title="All 2 branches covered.">        this.createdAt   = createdAt != null ? createdAt : &quot;&quot;;</span>
+<span class="fc bfc" id="L29" title="All 2 branches covered.">        this.updatedAt   = updatedAt != null ? updatedAt : &quot;&quot;;</span>
+<span class="fc" id="L30">    }</span>
+
+    /** Unique slug identifier for this prompt. */
+    public String getName() {
+<span class="fc" id="L34">        return name;</span>
+    }
+
+    /** Active deployed version number. */
+    public int getVersion() {
+<span class="fc" id="L39">        return version;</span>
+    }
+
+    /** Rendered prompt text with all variables substituted. */
+    public String getText() {
+<span class="fc" id="L44">        return text;</span>
+    }
+
+    /** Human-readable description of what this prompt does. */
+    public String getDescription() {
+<span class="fc" id="L49">        return description;</span>
+    }
+
+    /** Tags associated with this prompt. Never {@code null}; may be empty. */
+    public List&lt;String&gt; getTags() {
+<span class="fc" id="L54">        return tags;</span>
+    }
+
+    /** ISO-8601 creation timestamp, or empty string if not provided. */
+    public String getCreatedAt() {
+<span class="fc" id="L59">        return createdAt;</span>
+    }
+
+    /** ISO-8601 last-updated timestamp, or empty string if not provided. */
+    public String getUpdatedAt() {
+<span class="fc" id="L64">        return updatedAt;</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="fc" id="L69">        return &quot;PromptResponse{name='&quot; + name + &quot;', version=&quot; + version + &quot;}&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SpanHelpers.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">SpanHelpers.java</span></div><h1>SpanHelpers.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
+import io.opentelemetry.api.trace.Span;
+
+/**
+ * Utility methods for enriching OpenTelemetry spans with LLM, RAG, and tool-call metadata.
+ *
+ * &lt;p&gt;All methods are null-safe for the {@code Span} argument — calls on
+ * {@link Span#getInvalid()} are silently no-ops as per the OTel API contract.
+ *
+ * &lt;p&gt;Example:
+ * &lt;pre&gt;{@code
+ * Span span = tracer.spanBuilder(&quot;llm.chat&quot;).startSpan();
+ * try (Scope scope = span.makeCurrent()) {
+ *     SpanHelpers.recordConversation(span, conversationId, sessionId, turnIndex);
+ *     SpanHelpers.recordRagChunk(span, chunk);
+ *     SpanHelpers.recordToolCall(span, call);
+ * } finally {
+ *     span.end();
+ * }
+ * }&lt;/pre&gt;
+ */
+public final class SpanHelpers {
+
+    // -- Conversation attribute keys --
+<span class="fc" id="L29">    private static final AttributeKey&lt;String&gt; KEY_CONV_ID    = AttributeKey.stringKey(&quot;llm.conversation.id&quot;);</span>
+<span class="fc" id="L30">    private static final AttributeKey&lt;String&gt; KEY_SESSION_ID = AttributeKey.stringKey(&quot;llm.session.id&quot;);</span>
+<span class="fc" id="L31">    private static final AttributeKey&lt;Long&gt;   KEY_TURN_INDEX = AttributeKey.longKey(&quot;llm.turn.index&quot;);</span>
+
+    // -- RAG event attribute keys --
+<span class="fc" id="L34">    private static final AttributeKey&lt;String&gt; KEY_RAG_CHUNK_ID = AttributeKey.stringKey(&quot;rag.chunk.id&quot;);</span>
+<span class="fc" id="L35">    private static final AttributeKey&lt;String&gt; KEY_RAG_SOURCE   = AttributeKey.stringKey(&quot;rag.source&quot;);</span>
+<span class="fc" id="L36">    private static final AttributeKey&lt;Double&gt; KEY_RAG_SCORE    = AttributeKey.doubleKey(&quot;rag.chunk.score&quot;);</span>
+<span class="fc" id="L37">    private static final AttributeKey&lt;String&gt; KEY_RAG_CONTENT  = AttributeKey.stringKey(&quot;rag.chunk.content&quot;);</span>
+
+    // -- Tool-call event attribute keys --
+<span class="fc" id="L40">    private static final AttributeKey&lt;String&gt; KEY_TOOL_NAME    = AttributeKey.stringKey(&quot;llm.tool.name&quot;);</span>
+<span class="fc" id="L41">    private static final AttributeKey&lt;String&gt; KEY_TOOL_CALL_ID = AttributeKey.stringKey(&quot;llm.tool.call_id&quot;);</span>
+<span class="fc" id="L42">    private static final AttributeKey&lt;String&gt; KEY_TOOL_INPUT   = AttributeKey.stringKey(&quot;llm.tool.input&quot;);</span>
+<span class="fc" id="L43">    private static final AttributeKey&lt;String&gt; KEY_TOOL_OUTPUT  = AttributeKey.stringKey(&quot;llm.tool.output&quot;);</span>
+
+    private SpanHelpers() {}
+
+    /**
+     * Sets conversation metadata on the given span.
+     *
+     * &lt;p&gt;Attributes set:
+     * &lt;ul&gt;
+     *   &lt;li&gt;{@code llm.conversation.id} — always set when {@code conversationId} is non-null&lt;/li&gt;
+     *   &lt;li&gt;{@code llm.session.id} — only set when {@code sessionId} is non-null&lt;/li&gt;
+     *   &lt;li&gt;{@code llm.turn.index} — always set&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param span           the active span to enrich
+     * @param conversationId stable ID grouping all turns in a multi-turn conversation
+     * @param sessionId      optional session or thread identifier; may be {@code null}
+     * @param turnIndex      zero-based position of this turn within the conversation
+     */
+    public static void recordConversation(Span span, String conversationId,
+            String sessionId, int turnIndex) {
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        if (conversationId != null) {</span>
+<span class="fc" id="L65">            span.setAttribute(KEY_CONV_ID, conversationId);</span>
+        }
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (sessionId != null) {</span>
+<span class="fc" id="L68">            span.setAttribute(KEY_SESSION_ID, sessionId);</span>
+        }
+<span class="fc" id="L70">        span.setAttribute(KEY_TURN_INDEX, (long) turnIndex);</span>
+<span class="fc" id="L71">    }</span>
+
+    /**
+     * Adds a {@code &quot;rag.chunk.retrieved&quot;} event to the given span.
+     *
+     * &lt;p&gt;Attributes on the event:
+     * &lt;ul&gt;
+     *   &lt;li&gt;{@code rag.chunk.id}&lt;/li&gt;
+     *   &lt;li&gt;{@code rag.source}&lt;/li&gt;
+     *   &lt;li&gt;{@code rag.chunk.score}&lt;/li&gt;
+     *   &lt;li&gt;{@code rag.chunk.content} — only added when {@link RagChunk#getContent()} is non-null&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param span  the active span to enrich
+     * @param chunk the retrieved chunk; must not be {@code null}
+     * @throws NullPointerException if {@code chunk} is null
+     */
+    public static void recordRagChunk(Span span, RagChunk chunk) {
+<span class="fc bfc" id="L89" title="All 2 branches covered.">        if (chunk == null) {</span>
+<span class="fc" id="L90">            throw new NullPointerException(&quot;SpanHelpers.recordRagChunk: chunk must not be null&quot;);</span>
+        }
+
+<span class="fc" id="L93">        AttributesBuilder attrs = Attributes.builder()</span>
+<span class="fc" id="L94">                .put(KEY_RAG_CHUNK_ID, chunk.getChunkId())</span>
+<span class="fc" id="L95">                .put(KEY_RAG_SOURCE,   chunk.getSource())</span>
+<span class="fc" id="L96">                .put(KEY_RAG_SCORE,    chunk.getScore());</span>
+
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        if (chunk.getContent() != null) {</span>
+<span class="fc" id="L99">            attrs.put(KEY_RAG_CONTENT, chunk.getContent());</span>
+        }
+
+<span class="fc" id="L102">        span.addEvent(&quot;rag.chunk.retrieved&quot;, attrs.build());</span>
+<span class="fc" id="L103">    }</span>
+
+    /**
+     * Adds a {@code &quot;llm.tool.call&quot;} event to the given span.
+     *
+     * &lt;p&gt;Attributes on the event:
+     * &lt;ul&gt;
+     *   &lt;li&gt;{@code llm.tool.name}&lt;/li&gt;
+     *   &lt;li&gt;{@code llm.tool.call_id}&lt;/li&gt;
+     *   &lt;li&gt;{@code llm.tool.input} — only added when {@link ToolCall#getInput()} is non-null&lt;/li&gt;
+     *   &lt;li&gt;{@code llm.tool.output} — only added when {@link ToolCall#getOutput()} is non-null&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param span the active span to enrich
+     * @param call the tool call metadata; must not be {@code null}
+     * @throws NullPointerException if {@code call} is null
+     */
+    public static void recordToolCall(Span span, ToolCall call) {
+<span class="fc bfc" id="L121" title="All 2 branches covered.">        if (call == null) {</span>
+<span class="fc" id="L122">            throw new NullPointerException(&quot;SpanHelpers.recordToolCall: call must not be null&quot;);</span>
+        }
+
+<span class="fc" id="L125">        AttributesBuilder attrs = Attributes.builder()</span>
+<span class="fc" id="L126">                .put(KEY_TOOL_NAME,    call.getToolName())</span>
+<span class="fc" id="L127">                .put(KEY_TOOL_CALL_ID, call.getCallId());</span>
+
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        if (call.getInput() != null) {</span>
+<span class="fc" id="L130">            attrs.put(KEY_TOOL_INPUT, call.getInput());</span>
+        }
+<span class="fc bfc" id="L132" title="All 2 branches covered.">        if (call.getOutput() != null) {</span>
+<span class="fc" id="L133">            attrs.put(KEY_TOOL_OUTPUT, call.getOutput());</span>
+        }
+
+<span class="fc" id="L136">        span.addEvent(&quot;llm.tool.call&quot;, attrs.build());</span>
+<span class="fc" id="L137">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

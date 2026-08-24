@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EvalClient.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">EvalClient.java</span></div><h1>EvalClient.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Internal HTTP client for submitting evaluation results to the NirikshaAI REST API.
+ * Not part of the public API — use {@link NirikshaAI#submitEval} instead.
+ */
+final class EvalClient {
+
+<span class="fc" id="L19">    private static final Logger LOGGER = LoggerFactory.getLogger(EvalClient.class);</span>
+
+<span class="fc" id="L21">    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()</span>
+<span class="fc" id="L22">            .connectTimeout(Duration.ofSeconds(10))</span>
+<span class="fc" id="L23">            .build();</span>
+
+    private final String baseUrl;
+    private final String apiKey;
+
+<span class="fc" id="L28">    EvalClient(String baseUrl, String apiKey) {</span>
+<span class="fc" id="L29">        this.baseUrl = baseUrl.replaceAll(&quot;/$&quot;, &quot;&quot;);</span>
+<span class="fc" id="L30">        this.apiKey  = apiKey;</span>
+<span class="fc" id="L31">    }</span>
+
+    /**
+     * Submits a single evaluation result.
+     *
+     * @throws NirikshaAIException if the server returns a non-2xx response
+     */
+    void submitEval(EvalInput input) {
+<span class="nc" id="L39">        submitEvalsBatch(List.of(input));</span>
+<span class="nc" id="L40">    }</span>
+
+    /**
+     * Submits a batch of evaluation results in a single HTTP request.
+     *
+     * @throws NirikshaAIException if the server returns a non-2xx response
+     */
+    void submitEvalsBatch(List&lt;EvalInput&gt; inputs) {
+<span class="nc bnc" id="L48" title="All 4 branches missed.">        if (inputs == null || inputs.isEmpty()) {</span>
+<span class="nc" id="L49">            return;</span>
+        }
+
+<span class="nc" id="L52">        String body = buildBatchJson(inputs);</span>
+<span class="nc" id="L53">        HttpRequest req = HttpRequest.newBuilder()</span>
+                // /api/v1/sdk/... — the SDK routes are behind the IngestKeyMiddleware
+                // group, which is what accepts a project-scoped nai_ key. This
+                // previously posted to /api/v1/evals/batch, a path the server has
+                // never served, so every submission 404'd. See README &quot;Eval
+                // Submission&quot;.
+<span class="nc" id="L59">                .uri(URI.create(baseUrl + &quot;/api/v1/sdk/evals/batch&quot;))</span>
+<span class="nc" id="L60">                .header(&quot;Content-Type&quot;, &quot;application/json&quot;)</span>
+<span class="nc" id="L61">                .header(&quot;X-API-Key&quot;, apiKey)</span>
+<span class="nc" id="L62">                .timeout(Duration.ofSeconds(15))</span>
+<span class="nc" id="L63">                .POST(HttpRequest.BodyPublishers.ofString(body))</span>
+<span class="nc" id="L64">                .build();</span>
+
+        try {
+<span class="nc" id="L67">            HttpResponse&lt;String&gt; resp = sendWithRetry(req);</span>
+<span class="nc bnc" id="L68" title="All 4 branches missed.">            if (resp.statusCode() &lt; 200 || resp.statusCode() &gt;= 300) {</span>
+<span class="nc" id="L69">                LOGGER.warn(&quot;NirikshaAI: eval submission failed (status={}): {}&quot;,</span>
+<span class="nc" id="L70">                        resp.statusCode(), resp.body());</span>
+<span class="nc" id="L71">                throw new NirikshaAIException(</span>
+<span class="nc" id="L72">                        &quot;Eval submission failed with HTTP &quot; + resp.statusCode() + &quot;: &quot; + resp.body());</span>
+            }
+<span class="nc" id="L74">            LOGGER.debug(&quot;NirikshaAI: submitted {} eval(s)&quot;, inputs.size());</span>
+<span class="nc" id="L75">        } catch (NirikshaAIException e) {</span>
+<span class="nc" id="L76">            throw e;</span>
+<span class="nc" id="L77">        } catch (Exception e) {</span>
+<span class="nc" id="L78">            LOGGER.warn(&quot;NirikshaAI: eval submission error&quot;, e);</span>
+<span class="nc" id="L79">            throw new NirikshaAIException(&quot;Eval submission failed: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L80">        }</span>
+<span class="nc" id="L81">    }</span>
+
+    private HttpResponse&lt;String&gt; sendWithRetry(HttpRequest req) throws Exception {
+<span class="nc" id="L84">        int maxAttempts = 3;</span>
+<span class="nc" id="L85">        Exception lastEx = null;</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        for (int attempt = 1; attempt &lt;= maxAttempts; attempt++) {</span>
+            try {
+<span class="nc" id="L88">                HttpResponse&lt;String&gt; resp = HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofString());</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">                if (resp.statusCode() &lt; 500) {</span>
+<span class="nc" id="L90">                    return resp; // success or 4xx (don't retry 4xx)</span>
+                }
+<span class="nc" id="L92">                LOGGER.warn(&quot;NirikshaAI: eval attempt {} got HTTP {}&quot;, attempt, resp.statusCode());</span>
+<span class="nc" id="L93">            } catch (Exception e) {</span>
+<span class="nc" id="L94">                LOGGER.warn(&quot;NirikshaAI: eval attempt {} failed: {}&quot;, attempt, e.getMessage());</span>
+<span class="nc" id="L95">                lastEx = e;</span>
+<span class="nc" id="L96">            }</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">            if (attempt &lt; maxAttempts) {</span>
+<span class="nc" id="L98">                Thread.sleep(attempt * 500L);</span>
+            }
+        }
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        throw lastEx != null ? lastEx : new NirikshaAIException(&quot;Eval failed after &quot; + maxAttempts + &quot; attempts&quot;);</span>
+    }
+
+    private String buildBatchJson(List&lt;EvalInput&gt; inputs) {
+<span class="nc" id="L105">        StringBuilder sb = new StringBuilder(&quot;{\&quot;evals\&quot;:[&quot;);</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        for (int i = 0; i &lt; inputs.size(); i++) {</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">            if (i &gt; 0) {</span>
+<span class="nc" id="L108">                sb.append(',');</span>
+            }
+<span class="nc" id="L110">            sb.append(toJson(inputs.get(i)));</span>
+        }
+<span class="nc" id="L112">        sb.append(&quot;]}&quot;);</span>
+<span class="nc" id="L113">        return sb.toString();</span>
+    }
+
+    private String toJson(EvalInput e) {
+<span class="nc" id="L117">        StringBuilder sb = new StringBuilder(&quot;{&quot;);</span>
+<span class="nc" id="L118">        sb.append(&quot;\&quot;trace_id\&quot;:&quot;).append(jsonString(e.getTraceId())).append(',');</span>
+<span class="nc" id="L119">        sb.append(&quot;\&quot;metric_name\&quot;:&quot;).append(jsonString(e.getMetricName())).append(',');</span>
+<span class="nc" id="L120">        sb.append(&quot;\&quot;score\&quot;:&quot;).append(e.getScore()).append(',');</span>
+<span class="nc" id="L121">        sb.append(&quot;\&quot;label\&quot;:&quot;).append(jsonString(e.getLabel())).append(',');</span>
+<span class="nc" id="L122">        sb.append(&quot;\&quot;eval_type\&quot;:&quot;).append(jsonString(e.getEvalType()));</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">        if (e.getExplanation() != null) {</span>
+<span class="nc" id="L124">            sb.append(&quot;,\&quot;explanation\&quot;:&quot;).append(jsonString(e.getExplanation()));</span>
+        }
+<span class="nc bnc" id="L126" title="All 2 branches missed.">        if (e.getExperimentId() != null) {</span>
+<span class="nc" id="L127">            sb.append(&quot;,\&quot;experiment_id\&quot;:&quot;).append(jsonString(e.getExperimentId()));</span>
+        }
+<span class="nc bnc" id="L129" title="All 2 branches missed.">        if (e.getConfidence() != null) {</span>
+<span class="nc" id="L130">            sb.append(&quot;,\&quot;confidence\&quot;:&quot;).append(e.getConfidence());</span>
+        }
+<span class="nc bnc" id="L132" title="All 4 branches missed.">        if (e.getMetadata() != null &amp;&amp; !e.getMetadata().isEmpty()) {</span>
+<span class="nc" id="L133">            sb.append(&quot;,\&quot;metadata\&quot;:{&quot;);</span>
+<span class="nc" id="L134">            boolean first = true;</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">            for (Map.Entry&lt;String, String&gt; entry : e.getMetadata().entrySet()) {</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">                if (!first) {</span>
+<span class="nc" id="L137">                    sb.append(',');</span>
+                }
+<span class="nc" id="L139">                sb.append(jsonString(entry.getKey())).append(':').append(jsonString(entry.getValue()));</span>
+<span class="nc" id="L140">                first = false;</span>
+<span class="nc" id="L141">            }</span>
+<span class="nc" id="L142">            sb.append('}');</span>
+        }
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        if (e.getEvalTime() != null) {</span>
+<span class="nc" id="L145">            sb.append(&quot;,\&quot;eval_time\&quot;:&quot;).append(jsonString(e.getEvalTime().toString()));</span>
+        }
+<span class="nc" id="L147">        sb.append('}');</span>
+<span class="nc" id="L148">        return sb.toString();</span>
+    }
+
+    private String jsonString(String s) {
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        if (s == null) {</span>
+<span class="nc" id="L153">            return &quot;null&quot;;</span>
+        }
+<span class="nc" id="L155">        return &quot;\&quot;&quot; + s.replace(&quot;\\&quot;, &quot;\\\\&quot;).replace(&quot;\&quot;&quot;, &quot;\\\&quot;&quot;) + &quot;\&quot;&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

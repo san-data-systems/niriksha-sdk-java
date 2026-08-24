@@ -1,0 +1,679 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NirikshaAI.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">NirikshaAI.java</span></div><h1>NirikshaAI.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+import io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporter;
+import io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporterBuilder;
+import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
+import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporterBuilder;
+import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
+import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporterBuilder;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.logs.SdkLoggerProvider;
+import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.sdk.resources.Resource;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+import io.opentelemetry.semconv.ResourceAttributes;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyStore;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Entry point for the NirikshaAI Java SDK.
+ *
+ * &lt;p&gt;Configures the OpenTelemetry Java SDK with OTLP gRPC exporters pointed at
+ * your NirikshaAI ingest endpoint, then registers the providers as globals so that
+ * all instrumentation libraries in the same JVM automatically export to NirikshaAI.
+ *
+ * &lt;h2&gt;Quick start (SaaS)&lt;/h2&gt;
+ * &lt;pre&gt;{@code
+ * ShutdownHook hook = NirikshaAI.builder()
+ *     .endpoint(&quot;https://app.niriksha.ai&quot;)
+ *     .otlpEndpoint(&quot;grpc-ingest.niriksha.ai:443&quot;)
+ *     .apiKey(System.getenv(&quot;NIRIKSHA_API_KEY&quot;))
+ *     .serviceName(&quot;my-service&quot;)
+ *     .environment(&quot;production&quot;)
+ *     .build();
+ * // ... your application ...
+ * hook.close(); // or use try-with-resources
+ * }&lt;/pre&gt;
+ *
+ * &lt;h2&gt;Private Cloud (trusted CA)&lt;/h2&gt;
+ * &lt;pre&gt;{@code
+ * ShutdownHook hook = NirikshaAI.builder()
+ *     .endpoint(&quot;https://niriksha.internal.example.com&quot;)
+ *     .apiKey(System.getenv(&quot;NIRIKSHA_API_KEY&quot;))
+ *     .caCertFile(&quot;/etc/ssl/certs/internal-ca.pem&quot;)
+ *     .serviceName(&quot;my-service&quot;)
+ *     .build();
+ * }&lt;/pre&gt;
+ */
+public final class NirikshaAI {
+
+<span class="fc" id="L67">    private static final Logger LOGGER = LoggerFactory.getLogger(NirikshaAI.class);</span>
+
+    // Shared state populated by Builder.build() — used by eval/prompt helpers.
+    private static volatile EvalClient evalClient;
+    private static volatile PromptClient promptClient;
+    private static volatile boolean initialized;
+
+    private NirikshaAI() {
+        // utility class — use builder()
+    }
+
+    /**
+     * Returns a new {@link Builder} for configuring the SDK.
+     */
+    public static Builder builder() {
+<span class="fc" id="L82">        return new Builder();</span>
+    }
+
+    /**
+     * Returns {@code true} if the SDK has been successfully initialised via
+     * {@link Builder#build()}.
+     */
+    public static boolean isInitialized() {
+<span class="fc" id="L90">        return initialized;</span>
+    }
+
+    /**
+     * Force-flushes all pending spans, metrics, and log records using a 5-second timeout.
+     * Call before process exit in serverless or short-lived environments.
+     */
+    public static void flush() {
+<span class="fc" id="L98">        flush(java.time.Duration.ofSeconds(5));</span>
+<span class="fc" id="L99">    }</span>
+
+    /**
+     * Force-flushes all pending spans, metrics, and log records within the given timeout.
+     * Call before process exit in serverless or short-lived environments.
+     *
+     * @param timeout maximum time to wait for each provider to flush
+     */
+    public static void flush(java.time.Duration timeout) {
+<span class="fc" id="L108">        long ms = timeout.toMillis();</span>
+<span class="fc" id="L109">        var otel = io.opentelemetry.api.GlobalOpenTelemetry.get();</span>
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">        if (otel instanceof io.opentelemetry.sdk.OpenTelemetrySdk sdk) {</span>
+<span class="nc" id="L111">            sdk.getSdkTracerProvider()</span>
+<span class="nc" id="L112">                    .forceFlush()</span>
+<span class="nc" id="L113">                    .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);</span>
+<span class="nc" id="L114">            sdk.getSdkMeterProvider()</span>
+<span class="nc" id="L115">                    .forceFlush()</span>
+<span class="nc" id="L116">                    .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);</span>
+<span class="nc" id="L117">            sdk.getSdkLoggerProvider()</span>
+<span class="nc" id="L118">                    .forceFlush()</span>
+<span class="nc" id="L119">                    .join(ms, java.util.concurrent.TimeUnit.MILLISECONDS);</span>
+        }
+<span class="fc" id="L121">    }</span>
+
+    // -------------------------------------------------------------------------
+    // Eval helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Submits a single LLM evaluation result to NirikshaAI.
+     *
+     * &lt;p&gt;Must be called after {@link Builder#build()} has been invoked.
+     *
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     * @throws NirikshaAIException   if the HTTP request fails
+     */
+    public static void submitEval(EvalInput input) {
+<span class="nc" id="L136">        evalClient().submitEval(input);</span>
+<span class="nc" id="L137">    }</span>
+
+    /**
+     * Submits a batch of LLM evaluation results in a single HTTP request.
+     *
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     * @throws NirikshaAIException   if the HTTP request fails
+     */
+    public static void submitEvalsBatch(java.util.List&lt;EvalInput&gt; inputs) {
+<span class="nc" id="L146">        evalClient().submitEvalsBatch(inputs);</span>
+<span class="nc" id="L147">    }</span>
+
+    // -------------------------------------------------------------------------
+    // Prompt helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Fetches the latest deployed version of the named prompt template.
+     *
+     * @param name prompt slug (e.g. {@code &quot;customer-support-system&quot;})
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     * @throws NirikshaAIException   if the HTTP request fails
+     */
+    public static PromptResponse getPrompt(String name) {
+<span class="nc" id="L161">        return promptClient().getPrompt(name, null);</span>
+    }
+
+    /**
+     * Fetches a prompt template with optional version pinning and variable substitution.
+     *
+     * @param name    prompt slug
+     * @param options version + variables, or {@code null} for defaults
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     * @throws NirikshaAIException   if the HTTP request fails
+     */
+    public static PromptResponse getPrompt(String name, GetPromptOptions options) {
+<span class="nc" id="L173">        return promptClient().getPrompt(name, options);</span>
+    }
+
+    /**
+     * Lists all prompt templates available in the current project.
+     *
+     * @throws IllegalStateException if the SDK has not been initialised yet
+     * @throws NirikshaAIException   if the HTTP request fails
+     */
+    public static java.util.List&lt;PromptResponse&gt; listPrompts() {
+<span class="nc" id="L183">        return promptClient().listPrompts();</span>
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal accessors
+    // -------------------------------------------------------------------------
+
+    /** Package-private — for test teardown only. Resets SDK state between tests. */
+    static void resetForTest() {
+<span class="fc" id="L192">        evalClient = null;</span>
+<span class="fc" id="L193">        promptClient = null;</span>
+<span class="fc" id="L194">        initialized = false;</span>
+<span class="fc" id="L195">    }</span>
+
+    private static EvalClient evalClient() {
+<span class="nc" id="L198">        EvalClient c = evalClient;</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">        if (c == null) {</span>
+<span class="nc" id="L200">            throw new IllegalStateException(</span>
+                    &quot;NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first&quot;);
+        }
+<span class="nc" id="L203">        return c;</span>
+    }
+
+    private static PromptClient promptClient() {
+<span class="nc" id="L207">        PromptClient c = promptClient;</span>
+<span class="nc bnc" id="L208" title="All 2 branches missed.">        if (c == null) {</span>
+<span class="nc" id="L209">            throw new IllegalStateException(</span>
+                    &quot;NirikshaAI: SDK not initialised — call NirikshaAI.builder()...build() first&quot;);
+        }
+<span class="nc" id="L212">        return c;</span>
+    }
+
+    // -------------------------------------------------------------------------
+    // Builder
+    // -------------------------------------------------------------------------
+
+    /**
+     * Fluent builder for configuring and initializing the NirikshaAI SDK.
+     */
+    public static final class Builder {
+
+        /** REST base URL, e.g. {@code https://app.niriksha.ai} */
+        private String endpoint;
+
+        /**
+         * gRPC ingest address override, e.g. {@code grpc-ingest.niriksha.ai:443}.
+         * When not set, the hostname is derived from {@link #endpoint} and
+         * {@link #otlpPort}.
+         */
+        private String otlpEndpoint;
+
+        /** Project API key ({@code nai_...}). */
+        private String apiKey;
+
+        /** OpenTelemetry {@code service.name} resource attribute. */
+<span class="fc" id="L238">        private String serviceName = &quot;my-service&quot;;</span>
+
+        /** OpenTelemetry {@code deployment.environment} resource attribute. */
+<span class="fc" id="L241">        private String environment = &quot;production&quot;;</span>
+
+        /** gRPC port when deriving the OTLP address from {@link #endpoint}. */
+<span class="fc" id="L244">        private int otlpPort = 4317;</span>
+
+        /** When {@code true}, exporters use plaintext gRPC (no TLS). */
+<span class="fc" id="L247">        private boolean insecure = false;</span>
+
+        /** When {@code true}, TLS certificate validation is disabled (dev/test only). */
+<span class="fc" id="L250">        private boolean tlsSkipVerify = false;</span>
+
+        /**
+         * Path to a PEM-encoded CA certificate file.
+         * When set, the exporter trusts this CA instead of the JVM default trust store.
+         */
+        private String caCertFile;
+
+        /** Metrics export interval. */
+<span class="fc" id="L259">        private Duration metricsExportInterval = Duration.ofSeconds(60);</span>
+
+        /** Whether to enable OTLP metric export. */
+<span class="fc" id="L262">        private boolean enableMetrics = true;</span>
+
+        /** Whether to enable OTLP log export. */
+<span class="fc" id="L265">        private boolean enableLogs = true;</span>
+
+        /** Head-based trace sampling rate (0.0–1.0). Default: 1.0 (sample all traces). */
+<span class="fc" id="L268">        private double sampleRate = 1.0;</span>
+
+<span class="fc" id="L270">        private Builder() {}</span>
+
+        // --- fluent setters ---
+
+        /**
+         * Sets the REST base URL of the NirikshaAI instance.
+         * Example: {@code https://app.niriksha.ai}
+         */
+        public Builder endpoint(String endpoint) {
+<span class="fc" id="L279">            this.endpoint = endpoint;</span>
+<span class="fc" id="L280">            return this;</span>
+        }
+
+        /**
+         * Overrides the gRPC ingest address.
+         * Example: {@code grpc-ingest.niriksha.ai:443}
+         * &lt;p&gt;When not set, the hostname is parsed from {@link #endpoint} and combined
+         * with {@link #otlpPort}.
+         */
+        public Builder otlpEndpoint(String otlpEndpoint) {
+<span class="fc" id="L290">            this.otlpEndpoint = otlpEndpoint;</span>
+<span class="fc" id="L291">            return this;</span>
+        }
+
+        /**
+         * Sets the project API key ({@code nai_...}).
+         * Sent as the {@code x-api-key} gRPC metadata header on every request.
+         */
+        public Builder apiKey(String apiKey) {
+<span class="fc" id="L299">            this.apiKey = apiKey;</span>
+<span class="fc" id="L300">            return this;</span>
+        }
+
+        /**
+         * Sets the OpenTelemetry {@code service.name} resource attribute.
+         * Defaults to {@code java-service}.
+         */
+        public Builder serviceName(String serviceName) {
+<span class="fc" id="L308">            this.serviceName = serviceName;</span>
+<span class="fc" id="L309">            return this;</span>
+        }
+
+        /**
+         * Sets the OpenTelemetry {@code deployment.environment} resource attribute.
+         * Defaults to {@code production}.
+         */
+        public Builder environment(String environment) {
+<span class="fc" id="L317">            this.environment = environment;</span>
+<span class="fc" id="L318">            return this;</span>
+        }
+
+        /**
+         * Sets the gRPC port used when deriving the OTLP address from the REST
+         * {@link #endpoint}. Defaults to {@code 4317}.
+         */
+        public Builder otlpPort(int otlpPort) {
+<span class="nc" id="L326">            this.otlpPort = otlpPort;</span>
+<span class="nc" id="L327">            return this;</span>
+        }
+
+        /**
+         * When {@code true}, exporters use plaintext gRPC (no TLS).
+         * Useful for local development or when a TLS-terminating proxy sits in front.
+         */
+        public Builder insecure(boolean insecure) {
+<span class="fc" id="L335">            this.insecure = insecure;</span>
+<span class="fc" id="L336">            return this;</span>
+        }
+
+        /**
+         * When {@code true}, TLS certificate validation is skipped.
+         * &lt;b&gt;Do not use in production.&lt;/b&gt;
+         */
+        public Builder tlsSkipVerify(boolean tlsSkipVerify) {
+<span class="nc" id="L344">            this.tlsSkipVerify = tlsSkipVerify;</span>
+<span class="nc" id="L345">            return this;</span>
+        }
+
+        /**
+         * Path to a PEM-encoded CA certificate file.
+         * Use this when your NirikshaAI instance uses a private CA.
+         */
+        public Builder caCertFile(String caCertFile) {
+<span class="nc" id="L353">            this.caCertFile = caCertFile;</span>
+<span class="nc" id="L354">            return this;</span>
+        }
+
+        /**
+         * Sets the metrics export interval. Defaults to {@code 60s}.
+         */
+        public Builder metricsExportInterval(Duration metricsExportInterval) {
+<span class="nc" id="L361">            this.metricsExportInterval = metricsExportInterval;</span>
+<span class="nc" id="L362">            return this;</span>
+        }
+
+        /**
+         * Enables or disables OTLP metric export. Defaults to {@code true}.
+         */
+        public Builder enableMetrics(boolean enableMetrics) {
+<span class="fc" id="L369">            this.enableMetrics = enableMetrics;</span>
+<span class="fc" id="L370">            return this;</span>
+        }
+
+        /**
+         * Enables or disables OTLP log export. Defaults to {@code true}.
+         */
+        public Builder enableLogs(boolean enableLogs) {
+<span class="fc" id="L377">            this.enableLogs = enableLogs;</span>
+<span class="fc" id="L378">            return this;</span>
+        }
+
+        /**
+         * Sets the head-based trace sampling rate (0.0–1.0).
+         * Use 0.1 to sample ~10% of traces. Default: 1.0 (sample all).
+         */
+        public Builder sampleRate(double sampleRate) {
+<span class="nc" id="L386">            this.sampleRate = sampleRate;</span>
+<span class="nc" id="L387">            return this;</span>
+        }
+
+        // --- build ---
+
+        /**
+         * Validates configuration, builds the OpenTelemetry SDK, registers it as the
+         * global instance, and returns a {@link ShutdownHook} that flushes all pending
+         * telemetry on close.
+         *
+         * @throws IllegalStateException if required fields are missing or configuration
+         *                               is invalid
+         */
+        public ShutdownHook build() {
+<span class="pc bpc" id="L401" title="1 of 4 branches missed.">            if (endpoint == null &amp;&amp; otlpEndpoint == null) {</span>
+<span class="fc" id="L402">                throw new IllegalStateException(</span>
+                        &quot;NirikshaAI: either endpoint or otlpEndpoint must be set&quot;);
+            }
+<span class="pc bpc" id="L405" title="1 of 4 branches missed.">            if (apiKey == null || apiKey.isBlank()) {</span>
+<span class="fc" id="L406">                throw new IllegalStateException(&quot;NirikshaAI: apiKey must be set&quot;);</span>
+            }
+
+<span class="fc" id="L409">            boolean useTls = resolveTls();</span>
+<span class="fc" id="L410">            String grpcAddress = resolveGrpcAddress(useTls);</span>
+
+<span class="fc" id="L412">            LOGGER.debug(&quot;NirikshaAI: initialising (service={}, env={}, grpc={}, tls={})&quot;,</span>
+<span class="fc" id="L413">                    serviceName, environment, grpcAddress, useTls);</span>
+
+<span class="fc" id="L415">            Resource resource = Resource.getDefault().merge(</span>
+<span class="fc" id="L416">                    Resource.builder()</span>
+<span class="fc" id="L417">                            .put(ResourceAttributes.SERVICE_NAME, serviceName)</span>
+<span class="fc" id="L418">                            .put(ResourceAttributes.DEPLOYMENT_ENVIRONMENT, environment)</span>
+<span class="fc" id="L419">                            .put(AttributeKey.stringKey(&quot;telemetry.sdk.version&quot;), SdkVersion.VERSION)</span>
+<span class="fc" id="L420">                            .put(AttributeKey.stringKey(&quot;telemetry.sdk.language&quot;), SdkVersion.LANGUAGE)</span>
+<span class="fc" id="L421">                            .build());</span>
+
+            // -- Trace exporter --
+<span class="fc" id="L424">            OtlpGrpcSpanExporter spanExporter = buildSpanExporter(grpcAddress, useTls);</span>
+
+            io.opentelemetry.sdk.trace.samplers.Sampler sampler;
+<span class="pc bpc" id="L427" title="1 of 2 branches missed.">            if (sampleRate &gt;= 1.0) {</span>
+<span class="fc" id="L428">                sampler = io.opentelemetry.sdk.trace.samplers.Sampler.alwaysOn();</span>
+<span class="nc bnc" id="L429" title="All 2 branches missed.">            } else if (sampleRate &lt;= 0.0) {</span>
+<span class="nc" id="L430">                sampler = io.opentelemetry.sdk.trace.samplers.Sampler.alwaysOff();</span>
+            } else {
+<span class="nc" id="L432">                sampler = io.opentelemetry.sdk.trace.samplers.Sampler.parentBased(</span>
+<span class="nc" id="L433">                        io.opentelemetry.sdk.trace.samplers.Sampler.traceIdRatioBased(sampleRate));</span>
+            }
+
+<span class="fc" id="L436">            SdkTracerProvider tracerProvider = SdkTracerProvider.builder()</span>
+<span class="fc" id="L437">                    .setResource(resource)</span>
+<span class="fc" id="L438">                    .setSampler(sampler)</span>
+<span class="fc" id="L439">                    .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())</span>
+<span class="fc" id="L440">                    .build();</span>
+
+            // -- Metrics exporter (optional) --
+<span class="fc" id="L443">            SdkMeterProvider meterProvider = null;</span>
+<span class="pc bpc" id="L444" title="1 of 2 branches missed.">            if (enableMetrics) {</span>
+<span class="nc" id="L445">                OtlpGrpcMetricExporter metricExporter = buildMetricExporter(grpcAddress, useTls);</span>
+<span class="nc" id="L446">                PeriodicMetricReader metricReader = PeriodicMetricReader.builder(metricExporter)</span>
+<span class="nc" id="L447">                        .setInterval(metricsExportInterval)</span>
+<span class="nc" id="L448">                        .build();</span>
+<span class="nc" id="L449">                meterProvider = SdkMeterProvider.builder()</span>
+<span class="nc" id="L450">                        .setResource(resource)</span>
+<span class="nc" id="L451">                        .registerMetricReader(metricReader)</span>
+<span class="nc" id="L452">                        .build();</span>
+            }
+
+            // -- Log exporter (optional) --
+<span class="fc" id="L456">            SdkLoggerProvider loggerProvider = null;</span>
+<span class="pc bpc" id="L457" title="1 of 2 branches missed.">            if (enableLogs) {</span>
+<span class="nc" id="L458">                OtlpGrpcLogRecordExporter logExporter = buildLogExporter(grpcAddress, useTls);</span>
+<span class="nc" id="L459">                loggerProvider = SdkLoggerProvider.builder()</span>
+<span class="nc" id="L460">                        .setResource(resource)</span>
+<span class="nc" id="L461">                        .addLogRecordProcessor(</span>
+<span class="nc" id="L462">                                BatchLogRecordProcessor.builder(logExporter).build())</span>
+<span class="nc" id="L463">                        .build();</span>
+            }
+
+            // -- Assemble SDK and register globals --
+<span class="fc" id="L467">            var sdkBuilder = OpenTelemetrySdk.builder()</span>
+<span class="fc" id="L468">                    .setTracerProvider(tracerProvider);</span>
+
+<span class="pc bpc" id="L470" title="1 of 2 branches missed.">            if (meterProvider != null) {</span>
+<span class="nc" id="L471">                sdkBuilder.setMeterProvider(meterProvider);</span>
+            }
+<span class="pc bpc" id="L473" title="1 of 2 branches missed.">            if (loggerProvider != null) {</span>
+<span class="nc" id="L474">                sdkBuilder.setLoggerProvider(loggerProvider);</span>
+            }
+
+<span class="fc" id="L477">            OpenTelemetrySdk openTelemetry = sdkBuilder</span>
+<span class="fc" id="L478">                    .setPropagators(io.opentelemetry.context.propagation.ContextPropagators.create(</span>
+<span class="fc" id="L479">                            io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator.getInstance()))</span>
+<span class="fc" id="L480">                    .buildAndRegisterGlobal();</span>
+
+            // Wire eval and prompt helpers — use REST endpoint as the base URL.
+<span class="pc bpc" id="L483" title="1 of 2 branches missed.">            String restBase = endpoint != null ? endpoint : &quot;https://app.niriksha.ai&quot;;</span>
+<span class="fc" id="L484">            NirikshaAI.evalClient = new EvalClient(restBase, apiKey);</span>
+<span class="fc" id="L485">            NirikshaAI.promptClient = new PromptClient(restBase, apiKey);</span>
+<span class="fc" id="L486">            NirikshaAI.initialized = true;</span>
+
+            // Quota errors are surfaced via the OpenTelemetry diagnostic logger
+            // which emits to SLF4J automatically when slf4j-api is on the classpath
+
+<span class="fc" id="L491">            return new ShutdownHook(openTelemetry);</span>
+        }
+
+        // -----------------------------------------------------------------------
+        // Internal helpers
+        // -----------------------------------------------------------------------
+
+        /**
+         * Decides whether to use TLS.
+         * Priority: {@code insecure} flag overrides, otherwise inferred from {@code endpoint}.
+         */
+        boolean resolveTls() {
+<span class="fc bfc" id="L503" title="All 2 branches covered.">            if (insecure) {</span>
+<span class="fc" id="L504">                return false;</span>
+            }
+<span class="pc bpc" id="L506" title="1 of 2 branches missed.">            if (endpoint != null) {</span>
+<span class="fc" id="L507">                return endpoint.startsWith(&quot;https&quot;);</span>
+            }
+            // otlpEndpoint only — default to TLS on
+<span class="nc" id="L510">            return true;</span>
+        }
+
+        /**
+         * Builds the gRPC address string that OTel Java exporters expect.
+         * For plaintext: {@code http://host:port}
+         * For TLS:       {@code https://host:port}
+         */
+        String resolveGrpcAddress(boolean useTls) {
+            String hostAndPort;
+<span class="pc bpc" id="L520" title="1 of 4 branches missed.">            if (otlpEndpoint != null &amp;&amp; !otlpEndpoint.isBlank()) {</span>
+                // Caller supplied explicit gRPC address; normalise to host:port
+<span class="fc" id="L522">                hostAndPort = stripScheme(otlpEndpoint);</span>
+            } else {
+                // Derive from REST endpoint
+<span class="fc" id="L525">                String host = parseHost(endpoint);</span>
+<span class="fc" id="L526">                hostAndPort = host + &quot;:&quot; + otlpPort;</span>
+            }
+
+<span class="fc bfc" id="L529" title="All 2 branches covered.">            String scheme = useTls ? &quot;https&quot; : &quot;http&quot;;</span>
+<span class="fc" id="L530">            return scheme + &quot;://&quot; + hostAndPort;</span>
+        }
+
+        private String stripScheme(String addr) {
+<span class="fc bfc" id="L534" title="All 2 branches covered.">            if (addr.startsWith(&quot;https://&quot;)) {</span>
+<span class="fc" id="L535">                return addr.substring(8);</span>
+            }
+<span class="pc bpc" id="L537" title="1 of 2 branches missed.">            if (addr.startsWith(&quot;http://&quot;)) {</span>
+<span class="nc" id="L538">                return addr.substring(7);</span>
+            }
+<span class="fc" id="L540">            return addr;</span>
+        }
+
+        private String parseHost(String url) {
+            try {
+<span class="fc" id="L545">                return new URL(url).getHost();</span>
+<span class="nc" id="L546">            } catch (MalformedURLException e) {</span>
+<span class="nc" id="L547">                throw new IllegalStateException(&quot;NirikshaAI: invalid endpoint URL: &quot; + url, e);</span>
+            }
+        }
+
+        private OtlpGrpcSpanExporter buildSpanExporter(String grpcAddress, boolean useTls) {
+<span class="fc" id="L552">            OtlpGrpcSpanExporterBuilder b = OtlpGrpcSpanExporter.builder()</span>
+<span class="fc" id="L553">                    .setEndpoint(grpcAddress)</span>
+<span class="fc" id="L554">                    .addHeader(&quot;x-api-key&quot;, apiKey);</span>
+<span class="fc" id="L555">            applyTlsConfig(b, useTls);</span>
+<span class="fc" id="L556">            return b.build();</span>
+        }
+
+        private OtlpGrpcMetricExporter buildMetricExporter(String grpcAddress, boolean useTls) {
+<span class="nc" id="L560">            OtlpGrpcMetricExporterBuilder b = OtlpGrpcMetricExporter.builder()</span>
+<span class="nc" id="L561">                    .setEndpoint(grpcAddress)</span>
+<span class="nc" id="L562">                    .addHeader(&quot;x-api-key&quot;, apiKey);</span>
+<span class="nc" id="L563">            applyTlsConfig(b, useTls);</span>
+<span class="nc" id="L564">            return b.build();</span>
+        }
+
+        private OtlpGrpcLogRecordExporter buildLogExporter(String grpcAddress, boolean useTls) {
+<span class="nc" id="L568">            OtlpGrpcLogRecordExporterBuilder b = OtlpGrpcLogRecordExporter.builder()</span>
+<span class="nc" id="L569">                    .setEndpoint(grpcAddress)</span>
+<span class="nc" id="L570">                    .addHeader(&quot;x-api-key&quot;, apiKey);</span>
+<span class="nc" id="L571">            applyTlsConfig(b, useTls);</span>
+<span class="nc" id="L572">            return b.build();</span>
+        }
+
+        /**
+         * Applies TLS customisation to any OTLP exporter builder that exposes
+         * {@code setSslContext(SSLContext, X509TrustManager)}.
+         *
+         * &lt;ul&gt;
+         *   &lt;li&gt;{@code insecure=true}  — endpoint already uses {@code http://}, nothing extra needed.&lt;/li&gt;
+         *   &lt;li&gt;{@code tlsSkipVerify=true} — installs a trust-all {@link X509TrustManager}.&lt;/li&gt;
+         *   &lt;li&gt;{@code caCertFile!=null} — loads the PEM and installs a custom trust store.&lt;/li&gt;
+         * &lt;/ul&gt;
+         */
+        private void applyTlsConfig(Object exporterBuilder, boolean useTls) {
+<span class="pc bpc" id="L586" title="1 of 2 branches missed.">            if (!useTls) {</span>
+                // plaintext — nothing to configure
+<span class="fc" id="L588">                return;</span>
+            }
+
+<span class="nc bnc" id="L591" title="All 2 branches missed.">            if (tlsSkipVerify) {</span>
+<span class="nc" id="L592">                LOGGER.warn(&quot;TLS verification disabled — do not use in production&quot;);</span>
+<span class="nc" id="L593">                X509TrustManager trustAll = trustAllManager();</span>
+<span class="nc" id="L594">                SSLContext ctx = buildSslContext(trustAll);</span>
+<span class="nc" id="L595">                setExporterSsl(exporterBuilder, ctx, trustAll);</span>
+<span class="nc" id="L596">                return;</span>
+            }
+
+<span class="nc bnc" id="L599" title="All 2 branches missed.">            if (caCertFile != null) {</span>
+                try {
+<span class="nc" id="L601">                    byte[] certBytes = Files.readAllBytes(Path.of(caCertFile));</span>
+<span class="nc" id="L602">                    X509TrustManager tm = trustManagerForCert(certBytes);</span>
+<span class="nc" id="L603">                    SSLContext ctx = buildSslContext(tm);</span>
+<span class="nc" id="L604">                    setExporterSsl(exporterBuilder, ctx, tm);</span>
+<span class="nc" id="L605">                } catch (Exception e) {</span>
+<span class="nc" id="L606">                    throw new IllegalStateException(</span>
+                            &quot;NirikshaAI: failed to load CA cert from &quot; + caCertFile, e);
+<span class="nc" id="L608">                }</span>
+            }
+            // else: use JVM default trust store — no customisation needed
+<span class="nc" id="L611">        }</span>
+
+        private void setExporterSsl(Object builder, SSLContext ctx, X509TrustManager tm) {
+            // OTel Java exporter builders share the same setSslContext API
+<span class="nc bnc" id="L615" title="All 2 branches missed.">            if (builder instanceof OtlpGrpcSpanExporterBuilder b) {</span>
+<span class="nc" id="L616">                b.setSslContext(ctx, tm);</span>
+<span class="nc bnc" id="L617" title="All 2 branches missed.">            } else if (builder instanceof OtlpGrpcMetricExporterBuilder b) {</span>
+<span class="nc" id="L618">                b.setSslContext(ctx, tm);</span>
+<span class="nc bnc" id="L619" title="All 2 branches missed.">            } else if (builder instanceof OtlpGrpcLogRecordExporterBuilder b) {</span>
+<span class="nc" id="L620">                b.setSslContext(ctx, tm);</span>
+            }
+<span class="nc" id="L622">        }</span>
+
+        private SSLContext buildSslContext(X509TrustManager tm) {
+            try {
+<span class="nc" id="L626">                SSLContext ctx = SSLContext.getInstance(&quot;TLS&quot;);</span>
+<span class="nc" id="L627">                ctx.init(null, new javax.net.ssl.TrustManager[]{tm}, null);</span>
+<span class="nc" id="L628">                return ctx;</span>
+<span class="nc" id="L629">            } catch (Exception e) {</span>
+<span class="nc" id="L630">                throw new IllegalStateException(&quot;NirikshaAI: failed to build SSLContext&quot;, e);</span>
+            }
+        }
+
+        /** Returns a trust manager that accepts all certificates. &lt;b&gt;Dev/test only.&lt;/b&gt; */
+        private X509TrustManager trustAllManager() {
+<span class="nc" id="L636">            return new X509TrustManager() {</span>
+                @Override
+                public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                    // intentionally empty — trust-all manager for dev/test only
+<span class="nc" id="L640">                }</span>
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                    // intentionally empty — trust-all manager for dev/test only
+<span class="nc" id="L645">                }</span>
+
+                @Override
+                public X509Certificate[] getAcceptedIssuers() {
+<span class="nc" id="L649">                    return new X509Certificate[0];</span>
+                }
+            };
+        }
+
+        /** Builds a {@link X509TrustManager} that trusts the supplied PEM certificate. */
+        private X509TrustManager trustManagerForCert(byte[] pemBytes) throws Exception {
+<span class="nc" id="L656">            CertificateFactory cf = CertificateFactory.getInstance(&quot;X.509&quot;);</span>
+            X509Certificate cert;
+<span class="nc" id="L658">            try (InputStream is = new java.io.ByteArrayInputStream(pemBytes)) {</span>
+<span class="nc" id="L659">                cert = (X509Certificate) cf.generateCertificate(is);</span>
+            }
+
+<span class="nc" id="L662">            KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());</span>
+<span class="nc" id="L663">            ks.load(null, null);</span>
+<span class="nc" id="L664">            ks.setCertificateEntry(&quot;niriksha-ca&quot;, cert);</span>
+
+<span class="nc" id="L666">            TrustManagerFactory tmf = TrustManagerFactory.getInstance(</span>
+<span class="nc" id="L667">                    TrustManagerFactory.getDefaultAlgorithm());</span>
+<span class="nc" id="L668">            tmf.init(ks);</span>
+
+<span class="nc bnc" id="L670" title="All 2 branches missed.">            for (javax.net.ssl.TrustManager tm : tmf.getTrustManagers()) {</span>
+<span class="nc bnc" id="L671" title="All 2 branches missed.">                if (tm instanceof X509TrustManager x) {</span>
+<span class="nc" id="L672">                    return x;</span>
+                }
+            }
+<span class="nc" id="L675">            throw new IllegalStateException(&quot;NirikshaAI: no X509TrustManager found&quot;);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

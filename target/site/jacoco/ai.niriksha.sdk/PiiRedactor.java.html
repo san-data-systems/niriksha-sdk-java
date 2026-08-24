@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PiiRedactor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">PiiRedactor.java</span></div><h1>PiiRedactor.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+import java.util.regex.Pattern;
+
+/**
+ * Redacts common PII patterns from strings before they are attached to spans or logs.
+ *
+ * &lt;p&gt;The following patterns are replaced, applied in order:
+ * &lt;ol&gt;
+ *   &lt;li&gt;Email addresses → {@code [REDACTED_EMAIL]}&lt;/li&gt;
+ *   &lt;li&gt;US phone numbers → {@code [REDACTED_PHONE]}&lt;/li&gt;
+ *   &lt;li&gt;US Social Security Numbers → {@code [REDACTED_SSN]}&lt;/li&gt;
+ *   &lt;li&gt;Credit/debit card numbers (13–16 digits, optionally space/dash separated) → {@code [REDACTED_CC]}&lt;/li&gt;
+ * &lt;/ol&gt;
+ *
+ * &lt;p&gt;Example:
+ * &lt;pre&gt;{@code
+ * String safe = PiiRedactor.redact(llmOutput);
+ * SpanHelpers.recordRagChunk(span,
+ *     RagChunk.builder()
+ *         .chunkId(&quot;c1&quot;).source(&quot;db&quot;).score(0.9)
+ *         .content(safe)
+ *         .build());
+ * }&lt;/pre&gt;
+ *
+ * &lt;p&gt;This class provides best-effort, heuristic redaction and is not a substitute for a
+ * dedicated PII detection service in high-compliance environments.
+ */
+public final class PiiRedactor {
+
+    /** Matches common email address formats. */
+<span class="fc" id="L32">    static final Pattern EMAIL_PATTERN = Pattern.compile(</span>
+            &quot;[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}&quot;);
+
+    /**
+     * Matches US phone numbers in common formats:
+     * {@code (555) 867-5309}, {@code 555-867-5309}, {@code +1 555 867 5309}, etc.
+     *
+     * &lt;p&gt;Possessive quantifiers ({@code ?+}, {@code ++}) are used throughout to prevent
+     * any backtracking and eliminate the risk of catastrophic ReDoS.
+     */
+<span class="fc" id="L42">    static final Pattern PHONE_PATTERN = Pattern.compile(</span>
+            &quot;(?:\\+?+1[\\s.\\-]?+)?+\\(?+\\d{3}\\)?+[\\s.\\-]?+\\d{3}[\\s.\\-]?+\\d{4}&quot;);
+
+    /** Matches US Social Security Numbers in {@code NNN-NN-NNNN} format. */
+<span class="fc" id="L46">    static final Pattern SSN_PATTERN = Pattern.compile(</span>
+            &quot;\\b\\d{3}-\\d{2}-\\d{4}\\b&quot;);
+
+    /**
+     * Matches 13–16 digit card numbers, optionally separated by single spaces or dashes.
+     * Applied last so it does not interfere with phone and SSN patterns.
+     *
+     * &lt;p&gt;Possessive quantifiers ({@code ?+}) prevent backtracking on the optional separators.
+     */
+<span class="fc" id="L55">    static final Pattern CC_PATTERN = Pattern.compile(</span>
+            &quot;\\b\\d{4}[- ]?+\\d{4}[- ]?+\\d{4}[- ]?+\\d{0,4}\\b&quot;);
+
+    private PiiRedactor() {}
+
+    /**
+     * Replaces PII patterns in {@code input} with placeholder strings.
+     *
+     * @param input the string to redact; may be {@code null}
+     * @return the redacted string, or {@code null} if {@code input} was {@code null}
+     */
+    public static String redact(String input) {
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        if (input == null) {</span>
+<span class="nc" id="L68">            return null;</span>
+        }
+<span class="fc" id="L70">        String result = EMAIL_PATTERN.matcher(input).replaceAll(&quot;[REDACTED_EMAIL]&quot;);</span>
+<span class="fc" id="L71">        result = PHONE_PATTERN.matcher(result).replaceAll(&quot;[REDACTED_PHONE]&quot;);</span>
+<span class="fc" id="L72">        result = SSN_PATTERN.matcher(result).replaceAll(&quot;[REDACTED_SSN]&quot;);</span>
+<span class="fc" id="L73">        result = CC_PATTERN.matcher(result).replaceAll(&quot;[REDACTED_CC]&quot;);</span>
+<span class="fc" id="L74">        return result;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

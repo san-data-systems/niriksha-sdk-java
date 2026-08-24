@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServerlessWrapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">ServerlessWrapper.java</span></div><h1>ServerlessWrapper.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+import java.util.concurrent.Callable;
+
+/**
+ * Utility for serverless and short-lived JVM environments (AWS Lambda, Google Cloud
+ * Functions, Azure Functions, Kubernetes Jobs, etc.).
+ *
+ * &lt;p&gt;In serverless runtimes the JVM process may be frozen or terminated immediately
+ * after the handler returns. Calling {@link NirikshaAI#flush()} in a {@code finally}
+ * block ensures that spans, metrics, and log records buffered by the OTLP batch
+ * processors are exported before the runtime recycles the instance.
+ *
+ * &lt;p&gt;Example — Lambda handler with a return value:
+ * &lt;pre&gt;{@code
+ * public APIGatewayProxyResponseEvent handleRequest(
+ *         APIGatewayProxyRequestEvent event, Context context) throws Exception {
+ *     return ServerlessWrapper.withFlush(() -&gt; {
+ *         // handler logic
+ *         return buildResponse(200, &quot;ok&quot;);
+ *     });
+ * }
+ * }&lt;/pre&gt;
+ *
+ * &lt;p&gt;Example — void handler:
+ * &lt;pre&gt;{@code
+ * public void handleRequest(SQSEvent event, Context context) throws Exception {
+ *     ServerlessWrapper.withFlush(() -&gt; processBatch(event.getRecords()));
+ * }
+ * }&lt;/pre&gt;
+ */
+public final class ServerlessWrapper {
+
+    private ServerlessWrapper() {}
+
+    /**
+     * Executes the given {@link Callable} and force-flushes all pending telemetry
+     * afterwards, even if the callable throws.
+     *
+     * &lt;p&gt;{@link NirikshaAI#flush()} is always called in the {@code finally} block.
+     * If the SDK has not been initialised, the flush call is a no-op.
+     *
+     * @param &lt;T&gt;      return type of the callable
+     * @param callable the handler logic to execute
+     * @return the value returned by the callable
+     * @throws Exception if the callable throws
+     */
+    public static &lt;T&gt; T withFlush(Callable&lt;T&gt; callable) throws Exception {
+        try {
+<span class="fc" id="L50">            return callable.call();</span>
+        } finally {
+<span class="fc" id="L52">            NirikshaAI.flush();</span>
+        }
+    }
+
+    /**
+     * Executes the given {@link ThrowingRunnable} and force-flushes all pending
+     * telemetry afterwards, even if the runnable throws.
+     *
+     * &lt;p&gt;{@link NirikshaAI#flush()} is always called in the {@code finally} block.
+     * If the SDK has not been initialised, the flush call is a no-op.
+     *
+     * @param runnable the handler logic to execute
+     * @throws Exception if the runnable throws
+     */
+    public static void withFlush(ThrowingRunnable runnable) throws Exception {
+        try {
+<span class="fc" id="L68">            runnable.run();</span>
+        } finally {
+<span class="fc" id="L70">            NirikshaAI.flush();</span>
+        }
+<span class="fc" id="L72">    }</span>
+
+    /**
+     * A {@link Runnable}-like interface whose {@link #run()} method is permitted to
+     * throw checked exceptions, allowing lambda-friendly use in handler methods that
+     * declare {@code throws Exception}.
+     */
+    @FunctionalInterface
+    public interface ThrowingRunnable {
+        /**
+         * Executes the handler logic.
+         *
+         * @throws Exception if an error occurs
+         */
+        void run() throws Exception;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

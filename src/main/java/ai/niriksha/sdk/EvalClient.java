@@ -51,7 +51,12 @@ final class EvalClient {
 
         String body = buildBatchJson(inputs);
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + "/api/v1/evals/batch"))
+                // /api/v1/sdk/... — the SDK routes are behind the IngestKeyMiddleware
+                // group, which is what accepts a project-scoped nai_ key. This
+                // previously posted to /api/v1/evals/batch, a path the server has
+                // never served, so every submission 404'd. See README "Eval
+                // Submission".
+                .uri(URI.create(baseUrl + "/api/v1/sdk/evals/batch"))
                 .header("Content-Type", "application/json")
                 .header("X-API-Key", apiKey)
                 .timeout(Duration.ofSeconds(15))

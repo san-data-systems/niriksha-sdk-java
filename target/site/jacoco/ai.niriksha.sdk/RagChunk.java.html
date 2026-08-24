@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RagChunk.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">RagChunk.java</span></div><h1>RagChunk.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+/**
+ * Metadata for a single retrieved document chunk.
+ *
+ * &lt;p&gt;Use {@link #builder()} to construct instances:
+ * &lt;pre&gt;{@code
+ * RagChunk chunk = RagChunk.builder()
+ *     .chunkId(&quot;chunk-42&quot;)
+ *     .source(&quot;s3://docs/manual.pdf#page=7&quot;)
+ *     .score(0.87)
+ *     .content(&quot;The warranty period is 12 months from purchase.&quot;)
+ *     .build();
+ * SpanHelpers.recordRagChunk(span, chunk);
+ * }&lt;/pre&gt;
+ */
+public final class RagChunk {
+
+    private final String chunkId;
+    private final String source;
+    private final double score;
+    private final String content; // may be null
+
+<span class="fc" id="L24">    private RagChunk(Builder b) {</span>
+<span class="fc" id="L25">        this.chunkId = b.chunkId;</span>
+<span class="fc" id="L26">        this.source  = b.source;</span>
+<span class="fc" id="L27">        this.score   = b.score;</span>
+<span class="fc" id="L28">        this.content = b.content;</span>
+<span class="fc" id="L29">    }</span>
+
+    /** Unique identifier for the retrieved chunk. */
+    public String getChunkId() {
+<span class="fc" id="L33">        return chunkId;</span>
+    }
+
+    /** Origin of the chunk (e.g. a document URI, table name, or file path). */
+    public String getSource() {
+<span class="fc" id="L38">        return source;</span>
+    }
+
+    /** Retrieval relevance score (higher is more relevant). */
+    public double getScore() {
+<span class="fc" id="L43">        return score;</span>
+    }
+
+    /**
+     * Raw text content of the chunk, or {@code null} if not captured.
+     * Avoid recording content that may contain PII; use {@link PiiRedactor} first.
+     */
+    public String getContent() {
+<span class="fc" id="L51">        return content;</span>
+    }
+
+    /** Returns a new {@link Builder}. */
+    public static Builder builder() {
+<span class="fc" id="L56">        return new Builder();</span>
+    }
+
+    /** Fluent builder for {@link RagChunk}. */
+    public static final class Builder {
+
+        private String chunkId;
+        private String source;
+        private double score;
+        private String content;
+
+        private Builder() {}
+
+        /** Sets the unique chunk identifier. Required. */
+        public Builder chunkId(String chunkId) {
+<span class="fc" id="L71">            this.chunkId = chunkId;</span>
+<span class="fc" id="L72">            return this;</span>
+        }
+
+        /** Sets the origin of the chunk. Required. */
+        public Builder source(String source) {
+<span class="fc" id="L77">            this.source = source;</span>
+<span class="fc" id="L78">            return this;</span>
+        }
+
+        /** Sets the retrieval relevance score. */
+        public Builder score(double score) {
+<span class="fc" id="L83">            this.score = score;</span>
+<span class="fc" id="L84">            return this;</span>
+        }
+
+        /** Sets the raw text content of the chunk. Optional. */
+        public Builder content(String content) {
+<span class="fc" id="L89">            this.content = content;</span>
+<span class="fc" id="L90">            return this;</span>
+        }
+
+        /**
+         * Builds the {@link RagChunk}.
+         *
+         * @throws IllegalStateException if {@code chunkId} or {@code source} is blank or null
+         */
+        public RagChunk build() {
+<span class="fc bfc" id="L99" title="All 4 branches covered.">            if (chunkId == null || chunkId.isBlank()) {</span>
+<span class="fc" id="L100">                throw new IllegalStateException(&quot;RagChunk: chunkId is required&quot;);</span>
+            }
+<span class="fc bfc" id="L102" title="All 4 branches covered.">            if (source == null || source.isBlank()) {</span>
+<span class="fc" id="L103">                throw new IllegalStateException(&quot;RagChunk: source is required&quot;);</span>
+            }
+<span class="fc" id="L105">            return new RagChunk(this);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

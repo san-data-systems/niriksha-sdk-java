@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EvalInput.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk</a> &gt; <span class="el_source">EvalInput.java</span></div><h1>EvalInput.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk;
+
+import java.time.Instant;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Input for a single LLM evaluation result.
+ *
+ * &lt;p&gt;Use {@link #builder()} to construct instances:
+ * &lt;pre&gt;{@code
+ * EvalInput eval = EvalInput.builder()
+ *     .traceId(span.getSpanContext().getTraceId())
+ *     .metricName(&quot;faithfulness&quot;)
+ *     .score(0.92)
+ *     .label(&quot;pass&quot;)
+ *     .explanation(&quot;Response accurately reflects the source documents&quot;)
+ *     .evalType(&quot;llm_judge&quot;)
+ *     .build();
+ * NirikshaAI.submitEval(eval);
+ * }&lt;/pre&gt;
+ */
+public final class EvalInput {
+
+    private final String traceId;
+    private final String metricName;
+    private final double score;
+    private final String label;
+    private final String explanation;
+    private final String evalType;
+
+    /** Groups evals into an A/B experiment. Optional. */
+    private final String experimentId;
+
+    /** Evaluator confidence in [0, 1]. {@code null} means unset. */
+    private final Double confidence;
+
+    /** Arbitrary context key-value pairs. Never {@code null}; may be empty. */
+    private final Map&lt;String, String&gt; metadata;
+
+    /** When the evaluation was performed. {@code null} means server time. */
+    private final Instant evalTime;
+
+<span class="fc" id="L45">    private EvalInput(Builder b) {</span>
+<span class="fc" id="L46">        this.traceId      = b.traceId;</span>
+<span class="fc" id="L47">        this.metricName   = b.metricName;</span>
+<span class="fc" id="L48">        this.score        = b.score;</span>
+<span class="fc" id="L49">        this.label        = b.label;</span>
+<span class="fc" id="L50">        this.explanation  = b.explanation;</span>
+<span class="fc" id="L51">        this.evalType     = b.evalType;</span>
+<span class="fc" id="L52">        this.experimentId = b.experimentId;</span>
+<span class="fc" id="L53">        this.confidence   = b.confidence;</span>
+<span class="fc" id="L54">        this.metadata     = Collections.unmodifiableMap(new HashMap&lt;&gt;(b.metadata));</span>
+<span class="fc" id="L55">        this.evalTime     = b.evalTime;</span>
+<span class="fc" id="L56">    }</span>
+
+    public String getTraceId() {
+<span class="fc" id="L59">        return traceId;</span>
+    }
+
+    public String getMetricName() {
+<span class="fc" id="L63">        return metricName;</span>
+    }
+
+    public double getScore() {
+<span class="fc" id="L67">        return score;</span>
+    }
+
+    public String getLabel() {
+<span class="fc" id="L71">        return label;</span>
+    }
+
+    public String getExplanation() {
+<span class="fc" id="L75">        return explanation;</span>
+    }
+
+    public String getEvalType() {
+<span class="fc" id="L79">        return evalType;</span>
+    }
+
+    public String getExperimentId() {
+<span class="fc" id="L83">        return experimentId;</span>
+    }
+
+    public Double getConfidence() {
+<span class="fc" id="L87">        return confidence;</span>
+    }
+
+    public Map&lt;String, String&gt; getMetadata() {
+<span class="fc" id="L91">        return metadata;</span>
+    }
+
+    public Instant getEvalTime() {
+<span class="fc" id="L95">        return evalTime;</span>
+    }
+
+    public static Builder builder() {
+<span class="fc" id="L99">        return new Builder();</span>
+    }
+
+    public static final class Builder {
+        private String traceId;
+        private String metricName;
+        private double score;
+<span class="fc" id="L106">        private String label = &quot;pass&quot;;</span>
+        private String explanation;
+<span class="fc" id="L108">        private String evalType = &quot;llm_judge&quot;;</span>
+        private String experimentId;
+        private Double confidence;
+<span class="fc" id="L111">        private final Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+        private Instant evalTime;
+
+<span class="fc" id="L114">        private Builder() {}</span>
+
+        /** 32-character hex OpenTelemetry trace ID. */
+        public Builder traceId(String traceId) {
+<span class="fc" id="L118">            this.traceId = traceId;</span>
+<span class="fc" id="L119">            return this;</span>
+        }
+
+        /** Name of the evaluation metric (e.g. &quot;faithfulness&quot;, &quot;toxicity&quot;). */
+        public Builder metricName(String metricName) {
+<span class="fc" id="L124">            this.metricName = metricName;</span>
+<span class="fc" id="L125">            return this;</span>
+        }
+
+        /** Score in the range [0, 1]. */
+        public Builder score(double score) {
+<span class="fc" id="L130">            this.score = score;</span>
+<span class="fc" id="L131">            return this;</span>
+        }
+
+        /** Human-readable outcome label (e.g. &quot;pass&quot;, &quot;fail&quot;). */
+        public Builder label(String label) {
+<span class="fc" id="L136">            this.label = label;</span>
+<span class="fc" id="L137">            return this;</span>
+        }
+
+        /** Optional free-text explanation of the score. */
+        public Builder explanation(String explanation) {
+<span class="fc" id="L142">            this.explanation = explanation;</span>
+<span class="fc" id="L143">            return this;</span>
+        }
+
+        /** Evaluation method: &quot;llm_judge&quot;, &quot;rule_based&quot;, or &quot;human&quot;. Default: &quot;llm_judge&quot;. */
+        public Builder evalType(String evalType) {
+<span class="fc" id="L148">            this.evalType = evalType;</span>
+<span class="fc" id="L149">            return this;</span>
+        }
+
+        /** Groups this eval into a named A/B experiment. Optional. */
+        public Builder experimentId(String experimentId) {
+<span class="fc" id="L154">            this.experimentId = experimentId;</span>
+<span class="fc" id="L155">            return this;</span>
+        }
+
+        /** Evaluator confidence score in [0, 1]. Optional. */
+        public Builder confidence(double confidence) {
+<span class="fc" id="L160">            this.confidence = confidence;</span>
+<span class="fc" id="L161">            return this;</span>
+        }
+
+        /** Arbitrary context metadata. Optional. */
+        public Builder metadata(Map&lt;String, String&gt; metadata) {
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">            if (metadata != null) {</span>
+<span class="fc" id="L167">                this.metadata.putAll(metadata);</span>
+            }
+<span class="fc" id="L169">            return this;</span>
+        }
+
+        /** When the evaluation was performed. {@code null} defers to server time. */
+        public Builder evalTime(Instant evalTime) {
+<span class="fc" id="L174">            this.evalTime = evalTime;</span>
+<span class="fc" id="L175">            return this;</span>
+        }
+
+        public EvalInput build() {
+<span class="pc bpc" id="L179" title="1 of 4 branches missed.">            if (traceId == null || traceId.isBlank()) {</span>
+<span class="fc" id="L180">                throw new IllegalStateException(&quot;EvalInput: traceId is required&quot;);</span>
+            }
+<span class="pc bpc" id="L182" title="2 of 4 branches missed.">            if (metricName == null || metricName.isBlank()) {</span>
+<span class="nc" id="L183">                throw new IllegalStateException(&quot;EvalInput: metricName is required&quot;);</span>
+            }
+<span class="pc bpc" id="L185" title="1 of 4 branches missed.">            if (score &lt; 0 || score &gt; 1) {</span>
+<span class="fc" id="L186">                throw new IllegalStateException(&quot;EvalInput: score must be in [0, 1]&quot;);</span>
+            }
+<span class="fc" id="L188">            return new EvalInput(this);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NirikshaAIProperties.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NirikshaAI Java SDK</a> &gt; <a href="index.source.html" class="el_package">ai.niriksha.sdk.spring</a> &gt; <span class="el_source">NirikshaAIProperties.java</span></div><h1>NirikshaAIProperties.java</h1><pre class="source lang-java linenums">package ai.niriksha.sdk.spring;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+/**
+ * Configuration properties for NirikshaAI Spring Boot autoconfiguration.
+ *
+ * Example {@code application.properties}:
+ * &lt;pre&gt;
+ * nirikshaai.endpoint=https://app.niriksha.ai
+ * nirikshaai.otlp-endpoint=grpc-ingest.niriksha.ai:443
+ * nirikshaai.api-key=nai_...
+ * nirikshaai.service-name=my-spring-app
+ * nirikshaai.environment=production
+ * nirikshaai.enable-metrics=true
+ * nirikshaai.enable-logs=true
+ * nirikshaai.sample-rate=1.0
+ * nirikshaai.insecure=false
+ * nirikshaai.tls-skip-verify=false
+ * &lt;/pre&gt;
+ */
+@ConfigurationProperties(prefix = &quot;nirikshaai&quot;)
+<span class="nc" id="L23">public class NirikshaAIProperties {</span>
+
+<span class="nc" id="L25">    private String endpoint = &quot;https://app.niriksha.ai&quot;;</span>
+    private String otlpEndpoint;
+    private String apiKey;
+<span class="nc" id="L28">    private String serviceName = &quot;my-service&quot;;</span>
+<span class="nc" id="L29">    private String environment = &quot;production&quot;;</span>
+<span class="nc" id="L30">    private boolean enableMetrics = true;</span>
+<span class="nc" id="L31">    private boolean enableLogs = true;</span>
+<span class="nc" id="L32">    private double sampleRate = 1.0;</span>
+<span class="nc" id="L33">    private boolean insecure = false;</span>
+<span class="nc" id="L34">    private boolean tlsSkipVerify = false;</span>
+    private String caCertFile;
+
+    public String getEndpoint() {
+<span class="nc" id="L38">        return endpoint;</span>
+    }
+
+    public void setEndpoint(String endpoint) {
+<span class="nc" id="L42">        this.endpoint = endpoint;</span>
+<span class="nc" id="L43">    }</span>
+
+    public String getOtlpEndpoint() {
+<span class="nc" id="L46">        return otlpEndpoint;</span>
+    }
+
+    public void setOtlpEndpoint(String otlpEndpoint) {
+<span class="nc" id="L50">        this.otlpEndpoint = otlpEndpoint;</span>
+<span class="nc" id="L51">    }</span>
+
+    public String getApiKey() {
+<span class="nc" id="L54">        return apiKey;</span>
+    }
+
+    public void setApiKey(String apiKey) {
+<span class="nc" id="L58">        this.apiKey = apiKey;</span>
+<span class="nc" id="L59">    }</span>
+
+    public String getServiceName() {
+<span class="nc" id="L62">        return serviceName;</span>
+    }
+
+    public void setServiceName(String serviceName) {
+<span class="nc" id="L66">        this.serviceName = serviceName;</span>
+<span class="nc" id="L67">    }</span>
+
+    public String getEnvironment() {
+<span class="nc" id="L70">        return environment;</span>
+    }
+
+    public void setEnvironment(String environment) {
+<span class="nc" id="L74">        this.environment = environment;</span>
+<span class="nc" id="L75">    }</span>
+
+    public boolean isEnableMetrics() {
+<span class="nc" id="L78">        return enableMetrics;</span>
+    }
+
+    public void setEnableMetrics(boolean enableMetrics) {
+<span class="nc" id="L82">        this.enableMetrics = enableMetrics;</span>
+<span class="nc" id="L83">    }</span>
+
+    public boolean isEnableLogs() {
+<span class="nc" id="L86">        return enableLogs;</span>
+    }
+
+    public void setEnableLogs(boolean enableLogs) {
+<span class="nc" id="L90">        this.enableLogs = enableLogs;</span>
+<span class="nc" id="L91">    }</span>
+
+    public double getSampleRate() {
+<span class="nc" id="L94">        return sampleRate;</span>
+    }
+
+    public void setSampleRate(double sampleRate) {
+<span class="nc" id="L98">        this.sampleRate = sampleRate;</span>
+<span class="nc" id="L99">    }</span>
+
+    public boolean isInsecure() {
+<span class="nc" id="L102">        return insecure;</span>
+    }
+
+    public void setInsecure(boolean insecure) {
+<span class="nc" id="L106">        this.insecure = insecure;</span>
+<span class="nc" id="L107">    }</span>
+
+    public boolean isTlsSkipVerify() {
+<span class="nc" id="L110">        return tlsSkipVerify;</span>
+    }
+
+    public void setTlsSkipVerify(boolean tlsSkipVerify) {
+<span class="nc" id="L114">        this.tlsSkipVerify = tlsSkipVerify;</span>
+<span class="nc" id="L115">    }</span>
+
+    public String getCaCertFile() {
+<span class="nc" id="L118">        return caCertFile;</span>
+    }
+
+    public void setCaCertFile(String caCertFile) {
+<span class="nc" id="L122">        this.caCertFile = caCertFile;</span>
+<span class="nc" id="L123">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

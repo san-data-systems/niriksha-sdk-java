@@ -200,7 +200,57 @@ try (Scope ignored = span.makeCurrent()) {
 
 ---
 
-## 7. Examples
+## 7. Evals and prompts
+
+Both helpers talk to the project-scoped SDK routes under `/api/v1/sdk/`, which are
+the ones that accept a `nai_` API key.
+
+### Submitting evals
+
+```java
+NirikshaAI.submitEval(EvalInput.builder()
+    .traceId(Span.current().getSpanContext().getTraceId())
+    .metricName("faithfulness")
+    .score(0.92)
+    .label("pass")
+    .evalType("rule_based")
+    .build());
+```
+
+`submitEvalsBatch(List<EvalInput>)` sends many in one request. A non-2xx response
+throws `NirikshaAIException` — an eval that failed to record must not look like one
+that succeeded.
+
+### Rendering prompts
+
+```java
+PromptResponse p = NirikshaAI.getPrompt("product-description",
+        GetPromptOptions.builder()
+            .version(3)                        // omit to use the deployed version
+            .variable("product_name", "Widget Pro")
+            .build());
+
+String prompt = p.getText();                   // variables already substituted
+```
+
+Resolution order on the server: an explicit `version` wins; otherwise the most
+recently deployed version; otherwise the highest version, so a template that was
+authored but never deployed is still usable.
+
+Results are cached in-process for five minutes, keyed by name, version **and**
+variables — two different variable sets are two different renders.
+
+`listPrompts()` returns the available templates. The listing carries `id`, `name`,
+`description` and `created_at` only, so `getText()` is **empty** on a listed entry;
+call `getPrompt` to render one.
+
+If a render returns no content, `getPrompt` throws `NirikshaAIException` naming the
+prompt rather than handing back an empty string. An empty prompt sent to a model is
+the worst available outcome: nothing errors, and the answer is nonsense.
+
+---
+
+## 8. Examples
 
 | Example | Description |
 |---------|-------------|
