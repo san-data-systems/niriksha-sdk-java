@@ -4,8 +4,10 @@ ai/niriksha/sdk/RagChunk.class
 ai/niriksha/sdk/NirikshaAI.class
 ai/niriksha/sdk/BaggageHelper.class
 ai/niriksha/sdk/EvalInput.class
+ai/niriksha/sdk/Observe$SpanType.class
 ai/niriksha/sdk/SdkVersion.class
 ai/niriksha/sdk/GetPromptOptions.class
+ai/niriksha/sdk/Observe.class
 ai/niriksha/sdk/ServerlessWrapper$ThrowingRunnable.class
 ai/niriksha/sdk/PromptResponse.class
 ai/niriksha/sdk/NirikshaAIException.class
@@ -13,7 +15,6 @@ ai/niriksha/sdk/NirikshaAI$Builder$1.class
 ai/niriksha/sdk/GuardClient.class
 ai/niriksha/sdk/ToolCall$Builder.class
 ai/niriksha/sdk/ServerlessWrapper.class
-META-INF/spring-configuration-metadata.json
 ai/niriksha/sdk/RagChunk$Builder.class
 ai/niriksha/sdk/GuardBatchItem.class
 ai/niriksha/sdk/ToolCall.class

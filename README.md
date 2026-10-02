@@ -203,6 +203,30 @@ try (Scope ignored = span.makeCurrent()) {
 
 ---
 
+## 6a. Wrap an agent
+
+Three calls turn an agent into a **run** on LLM → Runs — live, with a timeline, token and tool counts, and the deterministic health findings (long running, repeated tool, repeated error, no activity, possible loop):
+
+```java
+import ai.niriksha.sdk.Observe;
+import ai.niriksha.sdk.Observe.SpanType;
+
+String answer = Observe.observe("research-agent", () -> {                 // the root span becomes the run
+    Observe.log("info", "agent started", Map.of("question", question));
+    String plan = Observe.span("plan", SpanType.LLM, () -> callModel(question), Map.of("gen_ai.request.model", "gpt-4o"));
+    List<String> docs = Observe.span("search", SpanType.TOOL, () -> search(plan));
+    return Observe.span("answer", SpanType.LLM, () -> callModel(docs));
+});
+```
+
+| Call | What it is | Attributes written |
+|---|---|---|
+| `Observe.observe(name, body[, attributes])` | the agent entry point; status becomes Succeeded / Failed | `gen_ai.operation.name=invoke_agent`, `gen_ai.agent.name`, `niriksha.run=true` |
+| `Observe.span(name, SpanType, body[, attributes])` | one step: `LLM`, `TOOL`, `AGENT`, `RETRIEVAL` | `gen_ai.operation.name` (`chat`, `execute_tool`, `invoke_agent`, `retrieval`), `gen_ai.tool.name`, plus whatever you pass (e.g. `gen_ai.request.model`) |
+| `Observe.log(level, message, attributes)` | a structured line on the run | a span event, plus an OTel log record through the logs bridge |
+
+Exceptions are recorded on the span and re-thrown. `Observe.using(openTelemetry)` points the wrappers at a specific `OpenTelemetry` instance instead of the global one (tests). These are plain OpenTelemetry GenAI semantic conventions, so the spans read in any OTel backend too. See `examples/agent-basic` for a runnable agent that produces a finding on purpose.
+
 ## 7. Evals and prompts
 
 Both helpers talk to the project-scoped SDK routes under `/api/v1/sdk/`, which are
